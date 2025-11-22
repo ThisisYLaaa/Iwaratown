@@ -1,0 +1,208 @@
+from Custom_Struc import *
+
+import logging
+from Logger import get_logger
+logger: logging.Logger = get_logger("搜索")
+
+from Init_Settings import *
+from Settings_Manager import Settings_Manager
+sm: Settings_Manager = Settings_Manager()
+
+from Iwara_Login import IwaraLogin
+iwara_login = IwaraLogin()
+
+from CScraper import get_scraper
+scraper = get_scraper()
+
+from urllib.parse import urljoin
+from bs4 import BeautifulSoup
+import cloudscraper
+import datetime
+import requests
+import json
+import re
+
+# 禁用不安全的HTTPS请求警告
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+class Search_Engine:
+    @staticmethod
+    def iw_search_author(keyword: str) -> list[stru_iw_author]:
+        api_url: str = f"{sm.settings.get('Iwara_API_Hostname', DEFAULT_SETTINGS['Iwara_API_Hostname'])}"
+        api_url += f"/search?type=users&page=0&query={keyword}"
+
+        try:
+            logger.info(f"向Iwara API发送作者搜索请求: {api_url}")
+            # 获取认证头
+            headers = iwara_login.get_auth_header()
+            if headers:
+                logger.debug(f"添加认证token到请求头")
+            
+            response = scraper.get(
+                url=api_url,
+                headers=headers,
+                timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+            )
+            logger.debug(f"status_code: {response.status_code}")
+            response.raise_for_status()
+            data: dict = response.json()
+
+            authors: list[stru_iw_author] = []
+            user: dict
+            for user in data.get("results", []):
+                authors.append(stru_iw_author(user))
+            logger.info(f"找到 {len(authors)} 个作者")
+            return authors
+        
+        except requests.exceptions.Timeout as e:
+            logger.error(f"请求Iwara API超时: {e}")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"连接Iwara API失败: {e}")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Iwara API返回HTTP错误: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"请求Iwara API时发生错误: {e}")
+        except json.JSONDecodeError as e:
+            logger.error(f"解析Iwara API响应JSON失败: {e}")
+        except Exception as e:
+            logger.error(f"处理Iwara API响应时发生未知错误: {e}")
+        return []
+    
+    @staticmethod
+    def iw_search_video(author_id: str) -> list[stru_iw_video]:
+        video_list: list[stru_iw_video] = []
+        current_page: int = 0
+        try:
+            for _ in range(100):
+                api_url = f"https://api.iwara.tv/videos?rating=all&sort=date&page={current_page}&user={author_id}"
+                
+                logger.info(f"向Iwara API发送视频列表请求: {api_url}")
+                # 获取认证头
+                headers = iwara_login.get_auth_header()
+                if headers:
+                    logger.debug(f"添加认证token到请求头")
+                
+                response = scraper.get(
+                    url=api_url,
+                    headers=headers,
+                    timeout=30, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+                )
+                logger.debug(f"status_code: {response.status_code}")
+                response.raise_for_status()
+                data: dict = response.json()
+
+                if not data.get("results", []):
+                    break
+                item: dict
+                for item in data.get("results", []):
+                    temp = stru_iw_video(item)
+                    temp.updatedAt = datetime.datetime.fromisoformat(temp.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
+                    # temp.createdAt = datetime.datetime.fromisoformat(temp.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
+                    # temp.updatedAt = datetime.datetime.fromisoformat(temp.updatedAt.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
+                    video_list.append(temp)
+                if len(data.get("results", [])) < 32:
+                    break
+                current_page += 1
+                        
+            logger.info(f"成功获取 {len(video_list)} 个视频")
+            return video_list
+            
+        except requests.exceptions.Timeout as e:
+            logger.error(f"请求Iwara API超时: {e}")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"连接Iwara API失败: {e}")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Iwara API返回HTTP错误: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"请求Iwara API时发生错误: {e}")
+        except json.JSONDecodeError as e:
+            logger.error(f"解析Iwara API响应JSON失败: {e}")
+        except Exception as e:
+            logger.error(f"处理Iwara API响应时发生未知错误: {e}")
+        return []
+
+    @staticmethod
+    def xpv_search_video(keyword: str, classid: int=21) -> list[stru_xpv_video]:
+        post_data: dict[str, str|int] = {
+            "classid": classid,
+            "show": "title,text,keyboard,ftitle",
+            "keyboard": keyword,
+            "Submit": ""
+        }
+        base_url = sm.settings.get("Xpv_Hostname", DEFAULT_SETTINGS["Xpv_Hostname"])
+        php_url: str = urljoin(base_url, "/e/search/index.php")
+
+        try:
+            logger.info(f"向Xpv发送视频搜索请求: {php_url}")
+            logger.debug(f"post_data: {post_data}")
+            response = scraper.post(
+                url=php_url, data=post_data,
+                timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+            )
+            logger.debug(f"status_code: {response.status_code}")
+            response.raise_for_status()
+
+            redirect_url: str = response.url
+            match = re.search(r'searchid=(\d+)', redirect_url)
+            if not match:
+                logger.error(f"无法从重定向URL中提取搜索ID: {redirect_url}")
+                return []
+            searchid: str = match.group(1)
+
+            video_list: list[stru_xpv_video] = []
+
+            current_page: int = 0
+            current_video_list = []
+            for _ in range(100):
+                logger.info(f"获取Xpv搜索结果页面 第{current_page}页: {redirect_url}")
+                target_url = urljoin(base_url, f"/e/search/result/index.php?page={current_page}&searchid={searchid}")
+                response = scraper.get(
+                    url=target_url,
+                    timeout=7, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+                )
+                response.raise_for_status()
+
+                soup: BeautifulSoup = BeautifulSoup(response.text, "html.parser")
+                # 每个视频的div标签
+                current_video_list = soup.find_all("div", class_="col-xs-6 col-sm-4 col-md-3 col-lg-3 list-col col-xl-2")
+                if not current_video_list:
+                    break
+                for div in current_video_list:
+                    # div标签下有a标签, 其中有视频链接(href)和标题(title)
+                    a_tag = div.find("a", href=True)
+                    if a_tag:
+                        href: str = str(a_tag["href"])
+                        title: str = str(a_tag.get("title", ""))
+                        # 提取title中[和]中间的字符串,如果没有则使用unknown
+                        author = re.search(r"\[(.*?)\]", title)
+                        author = author.group(1) if author else "unknown"
+                        # a标签下有img标签, 其中有视频上传日期(隐藏在data-src中,需要加工提取)
+                        # src示例: https://gamezy.xunge.cyou/titlep/2025/1107/3rkmgw2vadq7.jpg 需要提取2025 11 07
+                        img_tag = a_tag.find("img", src=True)
+                        if img_tag:
+                            data_src: str = str(img_tag["data-src"])
+                            match = re.search(r"/(\d{4})/(\d{2})(\d{2})/", data_src)
+                            if match:
+                                year, month, day = match.groups()
+                                updatedAt = f"{year}-{month}-{day}"
+                            else:
+                                updatedAt = ""
+                        else:
+                            updatedAt = ""
+
+                        video_list.append(stru_xpv_video({"title": title, "url": href, "author": author, "furl": target_url, "updatedAt": updatedAt}))
+                if len(current_video_list) < 60:
+                    break
+                current_page += 1
+            else:
+                logger.warning(f"搜索达到上限, 暂停搜索")
+            logger.info(f"成功获取 {len(video_list)} 个视频")
+            return video_list
+        
+        except cloudscraper.exceptions.CloudflareChallengeError as e:
+            logger.error(f"Xpv搜索接口返回Cloudflare挑战错误: {e}")
+        except Exception as e:
+            logger.error(f"处理Xpv搜索结果时发生未知错误: {e}")
+        return []
