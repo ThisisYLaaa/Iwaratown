@@ -78,8 +78,9 @@ class stru_xpv_custom:
     
     def get_type(self) -> str:
         """video: 社区帖子; pic: 图片"""
-        if any([x in self.url for x in XPV_CUSTOM_MAP.keys()]):
-            return XPV_CUSTOM_MAP[next(x for x in XPV_CUSTOM_MAP.keys())]
+        for k, v in XPV_CUSTOM_MAP.items():
+            if k in self.url:
+                return v
         return "Unknown"
     
     def get(self, key: str, default: Any = None) -> Any:
