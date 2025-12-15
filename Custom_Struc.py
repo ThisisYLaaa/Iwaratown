@@ -70,6 +70,9 @@ class stru_xpv_video:
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
+    
+    def get_updatedAt_timestamp(self) -> float:
+        return datetime.datetime.fromisoformat(self.updatedAt.replace("Z", "+00:00")).timestamp()
 
 class stru_xpv_custom:
     def __init__(self, data: dict):
