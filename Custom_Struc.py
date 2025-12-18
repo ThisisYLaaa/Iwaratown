@@ -88,3 +88,21 @@ class stru_xpv_custom:
     
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
+
+class stru_hanime1_video:
+    def __init__(self, data: dict):
+        self.furl: str = data.get("furl", "").strip()
+        self.title: str = data.get("title", "").strip()
+        self.title = re.sub(r'[\\/*?:"<>|]', "_", self.title)
+        self.url: str = data.get("url", "").strip()
+
+        self.source: str = "Hanime1"
+        self.author: str = data.get("author", "").strip()
+        self.updatedAt: str = data.get("updatedAt", "这BYD没有日期").strip()  # 一般没有
+        self.numViews: int = data.get("numViews", 0)
+        
+        self.dpath: str = sm.settings.get("Hanime1_Download_Path", DEFAULT_SETTINGS["Hanime1_Download_Path"])
+        self.dpath = os.path.join(self.dpath, self.author)
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.__dict__.get(key, default)

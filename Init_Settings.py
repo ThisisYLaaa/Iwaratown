@@ -20,7 +20,8 @@ DEFAULT_HEADERS: dict = {
 
 DEFAULT_SETTINGS["Favor"] = {
     "xpv": [],
-    "iwara": []
+    "iwara": [],
+    "hanime1": [],
 }
 
 # 这个后缀是固定的 未来可能会改变
@@ -41,8 +42,12 @@ XPV_CUSTOM_MAP: dict = {
 DEFAULT_SETTINGS["Xpv_Hostname"] = "https://www.xpicvid.com"
 DEFAULT_SETTINGS["Iwara_Hostname"] = "https://www.iwara.tv"
 DEFAULT_SETTINGS["Iwara_API_Hostname"] = "https://api.iwara.tv"
+DEFAULT_SETTINGS["Hanime1_Hostname"] = "https://hanime1.me"
+
 DEFAULT_SETTINGS["Xpv_Download_Path"] = os.path.join(os.path.expanduser("~"), "Xpv_Downloads")
 DEFAULT_SETTINGS["Iwara_Download_Path"] = os.path.join(os.path.expanduser("~"), "Iwara_Downloads")
 DEFAULT_SETTINGS["Custom_Download_Path"] = os.path.join(os.path.expanduser("~"), "Custom_Downloads")
+DEFAULT_SETTINGS["Hanime1_Download_Path"] = os.path.join(os.path.expanduser("~"), "Hanime1_Downloads")
+
 DEFAULT_SETTINGS["Max_Threads"] = 8
 DEFAULT_SETTINGS["Check_Cert"] = True

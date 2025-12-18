@@ -506,4 +506,33 @@ class Download_Engine:
             logger.error(f"多线程下载过程中发生错误: {e}")
             tracker.stop()
             return False
-        
+    
+    @staticmethod
+    def hanime1_download(video: stru_hanime1_video) -> bool:
+        """下载Hanime1视频"""
+        try:
+            # 检查目录是否存在
+            os.makedirs(video.dpath, exist_ok=True)
+            
+            # 构建保存路径
+            save_path = os.path.join(video.dpath, f"{video.title}.mp4")
+            
+            # 如果文件已存在，跳过下载
+            if os.path.exists(save_path):
+                logger.info(f"文件已存在，跳过下载: {video.title}")
+                return True
+            
+            # 下载视频 yt-dlp
+            opts = {
+                "outtmpl": save_path,
+                "quiet": True,
+                "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+            }
+            with yt_dlp.YoutubeDL(opts) as ydl:  # pyright: ignore[reportArgumentType]
+                ydl.download([video.url])
+                
+            logger.info(f"下载完成: {video.title}")
+            return True
+        except Exception as e:
+            logger.error(f"下载视频失败 {video.url}: {e}")
+            return False

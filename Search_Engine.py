@@ -14,7 +14,7 @@ iwara_login = IwaraLogin()
 from CScraper import get_scraper
 scraper = get_scraper()
 
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 from bs4 import BeautifulSoup
 import cloudscraper
 import datetime
@@ -215,3 +215,74 @@ class Search_Engine:
         except Exception as e:
             logger.error(f"处理Xpv搜索结果时发生未知错误: {e}")
         return []
+
+    @staticmethod
+    def hanime1_search_video(keyword: str) -> list[stru_hanime1_video]:
+        # query=keyword&type=&genre=&sort=&date=&duration=
+        params: dict[str, str|int] = {
+            "query": keyword,
+            "type": "",
+            "genre": "",
+            "sort": "",
+            "date": "",
+            "duration": "",
+        }
+        base_url = sm.settings.get("Hanime1_Hostname", DEFAULT_SETTINGS["Hanime1_Hostname"])
+        get_url: str = urljoin(base_url, "/search")
+
+        try:
+            video_list: list[stru_hanime1_video] = []
+            
+            current_page: int = 0
+            current_video_list = []
+            for _ in range(100):
+                params["page"] = current_page
+                logger.info(f"获取Hanime1搜索结果页面 第{current_page}页: {get_url}")
+                logger.debug(f"params: {params}")
+
+                response = scraper.get(
+                    url=get_url, params=params,
+                    timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+                )
+                logger.debug(f"status_code: {response.status_code}")
+                response.raise_for_status()
+
+                soup: BeautifulSoup = BeautifulSoup(response.text, "html.parser")
+                # 每个视频的div标签
+                current_video_list = soup.find_all("div", class_="col-xs-6 col-sm-4 col-md-2 search-doujin-videos hidden-xs hover-lighter multiple-link-wrapper")
+                if not current_video_list:
+                    break
+                for div in current_video_list:
+                    # div标签下class为"card-mobile-user"的a标签的值为author
+                    a_tag = div.find("a", class_="card-mobile-user")
+                    if a_tag:
+                        author: str = str(a_tag.get("title", ""))
+                    else:
+                        author = "unknown"
+
+                    # div标签本身有标题title, div下的a标签有视频链接href
+                    title: str = str(div.get("title", ""))
+                    a_tag = div.find("a", href=True)
+                    if a_tag:
+                        href: str = str(a_tag["href"])
+                        # 结合get_url和params, 构造完整的视频链接
+                        params_string = urlencode(params)
+                        furl: str = f"{get_url}?{params_string}"
+                        video_list.append(stru_hanime1_video({"title": title, "url": href, "author": author, "furl": furl}))
+                if len(current_video_list) < 60:
+                    break
+                current_page += 1
+            else:
+                logger.warning(f"搜索达到上限, 暂停搜索")
+            logger.info(f"成功获取 {len(video_list)} 个视频")
+            return video_list
+
+        except cloudscraper.exceptions.CloudflareChallengeError as e:
+            logger.error(f"Hanime1搜索接口返回Cloudflare挑战错误: {e}")
+        except Exception as e:
+            logger.error(f"处理Hanime1搜索结果时发生未知错误: {e}")
+        return []
+
+# Debug
+if __name__ == "__main__":
+    Search_Engine.hanime1_search_video("PastaPaprika")

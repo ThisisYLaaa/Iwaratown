@@ -58,6 +58,8 @@ class Settings_Manager:
                 self.settings["Xpv_Hostname"] = self.settings["Xpv_Hostname"][:-1]
             if self.settings.get("Iwara_Hostname", "").endswith('/'):
                 self.settings["Iwara_Hostname"] = self.settings["Iwara_Hostname"][:-1]
+            if self.settings.get("Hanime1_Hostname", "").endswith('/'):
+                self.settings["Hanime1_Hostname"] = self.settings["Hanime1_Hostname"][:-1]
             
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=4, ensure_ascii=False)
