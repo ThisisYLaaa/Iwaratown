@@ -128,8 +128,8 @@ class Search_Engine:
     @staticmethod
     def xpv_search_video(keyword: str, classid: int=21) -> list[stru_xpv_video]:
         current_time: float = time.time()
-        while current_time - Search_Engine._last_search_timestamp < 5:
-            logger.info(f"距离上次搜索过了 {current_time - Search_Engine._last_search_timestamp:.2f}/5 秒")
+        while current_time - Search_Engine._last_search_timestamp < 5.5:
+            logger.info(f"距离上次搜索过了 {current_time - Search_Engine._last_search_timestamp:.2f}/5.5 秒")
             time.sleep(0.5)
             current_time = time.time()
         Search_Engine._last_search_timestamp = current_time
