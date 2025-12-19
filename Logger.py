@@ -1,6 +1,7 @@
+import logging
+
 from colorama import Fore, Back, Style
 import colorama
-import logging
 
 from Init_Settings import *
 

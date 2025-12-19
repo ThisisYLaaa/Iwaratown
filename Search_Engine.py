@@ -1,34 +1,32 @@
-from Custom_Struc import *
-
-import logging
-from Logger import get_logger
-logger: logging.Logger = get_logger("搜索")
-
-from Init_Settings import *
-from Settings_Manager import Settings_Manager
-sm: Settings_Manager = Settings_Manager()
-
-from Iwara_Login import IwaraLogin
-iwara_login = IwaraLogin()
-
-from CScraper import get_scraper
-scraper = get_scraper()
-
-# 导入渠道管理器
-from Channel import channel_manager, Channel
-
-from urllib.parse import urlencode, urljoin
-from bs4 import BeautifulSoup
-import cloudscraper
 import datetime
-import requests
 import json
-import time
+import logging
 import re
+import time
+from urllib.parse import urlencode, urljoin
 
 # 禁用不安全的HTTPS请求警告
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+import cloudscraper
+import requests
+from bs4 import BeautifulSoup
+
+from Custom_Struc import *
+from Init_Settings import *
+from Iwara_Login import IwaraLogin
+from Logger import get_logger
+from Settings_Manager import Settings_Manager
+
+# 导入渠道管理器
+from Channel import Channel, channel_manager
+from CScraper import get_scraper
+
+logger: logging.Logger = get_logger("搜索")
+scraper = get_scraper()
+sm: Settings_Manager = Settings_Manager()
+iwara_login = IwaraLogin()
 
 
 class Search_Engine:

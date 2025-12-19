@@ -1,7 +1,5 @@
 import os
 
-DEFAULT_SETTINGS: dict = {}
-
 # 写死的配置
 STVERSION: str = "1.0.1"
 SETTINGS_FILE: str = f"iwtn_settings_{STVERSION}.json"
@@ -10,32 +8,12 @@ THEMENAME: str = "darkly"
 MYBILIURL: str = "https://space.bilibili.com/616045770"
 Miao: bool = True
 
-DEFAULT_SETTINGS["Ver"] = STVERSION
-DEFAULT_SETTINGS["ForceUsingXpxHostname"] = True
-DEFAULT_SETTINGS["Xpv_Pic_Download_RelativePath"] = "#Pics"
-DEFAULT_HEADERS: dict = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-    # Iwara不可以用Accept-Encoding
-}
-
-DEFAULT_SETTINGS["Favor"] = {
-    "xpv": [],
-    "iwara": [],
-    "hanime1": [],
-}
-
 # 这个后缀是固定的 未来可能会改变
 IWARA_SHA_POSTFIX: str = "_5nFp9kmbNnHdAFhaqMvt"
 
-PROXIES: dict = {
-    "http": "http://127.0.0.1:10809",
-    "https": "http://127.0.0.1:10809"
-}
-
-# 需要在UI.py/_download_worker中对应值和方法
-XPV_CUSTOM_MAP: dict = {
-    "moeupup": "pic",
-    "showinfo": "video"
+DEFAULT_HEADERS: dict = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    # Iwara不可以用Accept-Encoding
 }
 
 # 渠道配置 - 集中管理
@@ -62,14 +40,35 @@ CHANNELS_CONFIG = {
     }
 }
 
+PROXIES: dict = {
+    "http": "http://127.0.0.1:10809",
+    "https": "http://127.0.0.1:10809"
+}
+
+# 需要在UI.py/_download_worker中对应值和方法
+XPV_CUSTOM_MAP: dict = {
+    "moeupup": "pic",
+    "showinfo": "video"
+}
+
 # 可配置的配置 - 保持向后兼容性
+DEFAULT_SETTINGS: dict = {
+    "Ver": STVERSION,
+    "ForceUsingXpxHostname": True,
+    "Xpv_Pic_Download_RelativePath": "#Pics",
+    "Favor": {
+        "xpv": [],
+        "iwara": [],
+        "hanime1": [],
+    },
+    "Custom_Download_Path": os.path.join(os.path.expanduser("~"), "Custom_Downloads"),
+    "Max_Threads": 8,
+    "Check_Cert": True
+}
+
+# 添加渠道配置到默认设置
 for channel_name, config in CHANNELS_CONFIG.items():
     DEFAULT_SETTINGS[config["hostname_key"]] = config["default_hostname"]
     DEFAULT_SETTINGS[config["download_path_key"]] = config["default_download_path"]
     if "api_hostname_key" in config:
         DEFAULT_SETTINGS[config["api_hostname_key"]] = config["default_api_hostname"]
-
-DEFAULT_SETTINGS["Custom_Download_Path"] = os.path.join(os.path.expanduser("~"), "Custom_Downloads")
-
-DEFAULT_SETTINGS["Max_Threads"] = 8
-DEFAULT_SETTINGS["Check_Cert"] = True

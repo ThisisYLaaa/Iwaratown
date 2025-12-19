@@ -1,34 +1,32 @@
-from Custom_Struc import *
-
+import hashlib
+import json
 import logging
-from Logger import get_logger
-logger: logging.Logger = get_logger("下载")
+import os
+import re
+import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urljoin
 
-from Init_Settings import *
-from Settings_Manager import Settings_Manager
-sm: Settings_Manager = Settings_Manager()
+import cloudscraper
+from bs4 import BeautifulSoup
+import yt_dlp
 
+from Custom_Struc import *
 from DownloadProgressTracker import DownloadProgressTracker
-from CScraper import get_scraper
-scraper = get_scraper()
-
+from Init_Settings import *
 from Iwara_Login import IwaraLogin
-login_manager = IwaraLogin()
+from Logger import get_logger
+from Settings_Manager import Settings_Manager
 
 # 导入渠道管理器
 from Channel import channel_manager
+from CScraper import get_scraper
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urljoin
-from bs4 import BeautifulSoup
-import cloudscraper
-import subprocess
-import threading
-import hashlib
-import yt_dlp
-import json
-import re
-import os
+logger: logging.Logger = get_logger("下载")
+scraper = get_scraper()
+sm: Settings_Manager = Settings_Manager()
+login_manager = IwaraLogin()
 
 class Download_Engine:
     @staticmethod

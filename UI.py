@@ -1,29 +1,28 @@
-from Custom_Struc import *
-
 import logging
-from Logger import get_logger
-logger: logging.Logger = get_logger("⭐Iwaratown⭐")
+import os
+import queue
+import re
+import subprocess
+import threading
+from typing import Callable, Optional
 
+import ttkbootstrap as tb
+from ttkbootstrap.dialogs.dialogs import Messagebox
+from tkinter import filedialog as fd
+import tkinter as tk
+
+from Custom_Struc import *
 from Init_Settings import *
-from Settings_Manager import Settings_Manager
-sm: Settings_Manager = Settings_Manager()
-
-from Download_Engine import Download_Engine
-from Search_Engine import Search_Engine
 from Iwara_Login import IwaraLogin
+from Logger import get_logger
+from Search_Engine import Search_Engine
+from Settings_Manager import Settings_Manager
 
 # 导入渠道管理器
 from Channel import channel_manager
 
-from typing import Callable, Optional
-from ttkbootstrap.dialogs.dialogs import Messagebox
-from tkinter import filedialog as fd
-import ttkbootstrap as tb
-import tkinter as tk
-import subprocess
-import threading
-import queue
-import re
+logger: logging.Logger = get_logger("⭐Iwaratown⭐")
+sm: Settings_Manager = Settings_Manager()
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""
@@ -200,6 +199,7 @@ class Window_CheckUpdate(tb.Toplevel):
         super().__init__()
         self.master: "Win_Main" = master  # pyright: ignore[reportIncompatibleVariableOverride]
         self.new_videos = new_videos
+        self.sorted_videos: list[stru_xpv_video] = []  # 添加排序后的视频列表
         self.title("检查更新结果")
         self.geometry("1000x600")
         self.create_widgets()
@@ -259,11 +259,11 @@ class Window_CheckUpdate(tb.Toplevel):
         self.tree.delete(*self.tree.get_children())
 
         # 按照作者正序，日期倒序排序
-        sorted_videos = sorted(self.new_videos, key=lambda v: (v.author, v.get_updatedAt_timestamp()), reverse=True)
+        self.sorted_videos = sorted(self.new_videos, key=lambda v: (v.author, v.get_updatedAt_timestamp()), reverse=True)
 
         # 插入数据
         video: stru_xpv_video
-        for video in sorted_videos:
+        for video in self.sorted_videos:
             self.tree.insert('', 'end', values=(
                 video.author,
                 video.title,
@@ -280,9 +280,9 @@ class Window_CheckUpdate(tb.Toplevel):
         if col == "#4" and row:
             # 获取视频索引
             video_index = int(self.tree.index(row))
-            if video_index < len(self.new_videos):
+            if video_index < len(self.sorted_videos):
                 # 打开视频链接
-                video = self.new_videos[video_index]
+                video = self.sorted_videos[video_index]
                 self.master.open_edge_private(video.url)
 
     def download_selected(self) -> None:
@@ -297,9 +297,8 @@ class Window_CheckUpdate(tb.Toplevel):
 
         # 调用主窗口的下载函数
         if isinstance(self.master, Win_Main):
-            # 按照作者正序，日期倒序排序后的索引对应关系
-            sorted_videos = sorted(self.new_videos, key=lambda v: (v.author, v.get_updatedAt_timestamp()), reverse=True)
-            selected_videos = [sorted_videos[i] for i in selected_indices]
+            # 直接使用已排序的视频列表
+            selected_videos = [self.sorted_videos[i] for i in selected_indices]
 
             # 将选中的视频添加到队列中
             self.master.progressbar.configure(maximum=len(selected_videos), value=0)
@@ -673,7 +672,7 @@ class Win_Main(tb.Window):
         self.title("Iwaratown")
         self.geometry("1200x600")
         self.video_list: list[stru_iw_video|stru_xpv_video|stru_hanime1_video] = []
-        self.urlForEdgeToOpen: str = ""
+        self.url_for_edge_to_open: str = ""
         self.current_author: str = ""
 
         self.download_queue: queue.Queue[stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video] = queue.Queue()
@@ -719,7 +718,7 @@ class Win_Main(tb.Window):
             logger.debug("打开设置窗口"),
             Window_Settings(self)
         ]).pack(side='left', padx=5)
-        self.btn_edge = tb.Button(frame_toolbar, text="Edge无痕浏览", state=tk.DISABLED, command= lambda: [self.open_edge_private(self.urlForEdgeToOpen)])
+        self.btn_edge = tb.Button(frame_toolbar, text="Edge无痕浏览", state=tk.DISABLED, command= lambda: [self.open_edge_private(self.url_for_edge_to_open)])
         self.btn_edge.pack(side='left', padx=5)
         tb.Button(frame_toolbar, text="收藏夹", command=lambda: [
             logger.debug("打开收藏夹窗口"),
@@ -742,7 +741,7 @@ class Win_Main(tb.Window):
         self.entry_custom_url = tb.Entry(frame_toolbar, width=60)
         self.entry_custom_url.pack(side='left', padx=5)
         tb.Button(frame_toolbar, text="自定义下载", 
-            command=self.start_download_custom).pack(side='left', padx=5)
+                  command=self.start_download_custom).pack(side='left', padx=5)
         tb.Button(frame_toolbar, text="一键检查更新", command=self.check_updates).pack(side='left', padx=5)
 
         frame_search = tb.Frame(self)
@@ -921,7 +920,7 @@ class Win_Main(tb.Window):
                     self.selected_author: str = authors[0].username
                     logger.info(f"仅找到一位作者: {self.selected_author}")
                     self.video_list = Search_Engine.iw_search_video(authors[0].id)  # pyright: ignore[reportAttributeAccessIssue]
-                    self.urlForEdgeToOpen = f"{sm.settings.get('Iwara_Hostname', DEFAULT_SETTINGS['Iwara_Hostname'])}/profile/{self.selected_author}/videos"
+                    self.url_for_edge_to_open = f"{sm.settings.get('Iwara_Hostname', DEFAULT_SETTINGS['Iwara_Hostname'])}/profile/{self.selected_author}/videos"
                     self.after(0, lambda: self.btn_edge.configure(state=tk.NORMAL))
                     self.after(0, lambda: self.btn_local.configure(state=tk.NORMAL))
                 else:
@@ -940,7 +939,7 @@ class Win_Main(tb.Window):
                                 break
                         if selected_author_id:
                             self.video_list = Search_Engine.iw_search_video(selected_author_id)  # pyright: ignore[reportAttributeAccessIssue]
-                            self.urlForEdgeToOpen = f"{sm.settings.get('Iwara_Hostname', DEFAULT_SETTINGS['Iwara_Hostname'])}/profile/{self.selected_author}/videos"
+                            self.url_for_edge_to_open = f"{sm.settings.get('Iwara_Hostname', DEFAULT_SETTINGS['Iwara_Hostname'])}/profile/{self.selected_author}/videos"
                         else:
                             logger.warning("未找到所选作者的ID")
                             self.video_list = []
@@ -952,13 +951,13 @@ class Win_Main(tb.Window):
                 self.video_list = channel_manager.search(keyword, source)
                 if not self.video_list:
                     return
-                self.urlForEdgeToOpen = self.video_list[0].get('furl', '')
+                self.url_for_edge_to_open = self.video_list[0].get('furl', '')
                 self.selected_author = self.video_list[0].author
             else:
                 logger.warning(f"未知的来源: {source}")
                 self.video_list = []
             
-            if self.urlForEdgeToOpen:
+            if self.url_for_edge_to_open:
                 self.after(0, lambda: self.btn_edge.configure(state=tk.NORMAL))
                 self.after(0, lambda: self.btn_local.configure(state=tk.NORMAL))
 

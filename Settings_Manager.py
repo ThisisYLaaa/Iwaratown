@@ -1,9 +1,10 @@
-from Init_Settings import *
-
-import logging
-from Logger import get_logger
-logger: logging.Logger = get_logger("设置")
 import json
+import logging
+
+from Init_Settings import *
+from Logger import get_logger
+
+logger: logging.Logger = get_logger("设置")
 
 class Settings_Manager:
     _Settings_Manager_instance = None

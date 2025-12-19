@@ -53,6 +53,9 @@ class Channel:
             
             if download_method:
                 logger.info(f"使用{self.name}渠道的{task_type}方法下载任务")
+                # 对于自定义任务类型，传递URL而不是整个对象
+                if task_type in ["pic", "video"] and hasattr(task, 'url'):
+                    return download_method(task.url)
                 return download_method(task)
             else:
                 logger.error(f"{self.name}渠道没有找到合适的下载方法，任务类型: {task_type}")

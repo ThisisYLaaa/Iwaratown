@@ -1,11 +1,13 @@
-from Init_Settings import *
-
-from Settings_Manager import Settings_Manager
-sm: Settings_Manager = Settings_Manager()
-
-from typing import Any, Callable
 import datetime
+import os
 import re
+from typing import Any, Callable
+
+from Init_Settings import *
+from Settings_Manager import Settings_Manager
+
+# 初始化设置管理器
+sm: Settings_Manager = Settings_Manager()
 
 class stru_iw_author:
     def __init__(self, data: dict):
@@ -77,7 +79,8 @@ class stru_xpv_video:
 class stru_xpv_custom:
     def __init__(self, data: dict):
         self.url: str = data.get('url', '')
-        self.type:str = self.get_type()
+        self.type: str = self.get_type()
+        self.source: str = "Xpv"  # 添加source属性，确保渠道管理器能识别
     
     def get_type(self) -> str:
         """video: 社区帖子; pic: 图片"""
