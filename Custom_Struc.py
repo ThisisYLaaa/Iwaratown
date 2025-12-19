@@ -3,7 +3,7 @@ from Init_Settings import *
 from Settings_Manager import Settings_Manager
 sm: Settings_Manager = Settings_Manager()
 
-from typing import Any
+from typing import Any, Callable
 import datetime
 import re
 

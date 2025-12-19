@@ -14,6 +14,9 @@ iwara_login = IwaraLogin()
 from CScraper import get_scraper
 scraper = get_scraper()
 
+# 导入渠道管理器
+from Channel import channel_manager, Channel
+
 from urllib.parse import urlencode, urljoin
 from bs4 import BeautifulSoup
 import cloudscraper
@@ -223,7 +226,7 @@ class Search_Engine:
             "query": keyword,
             "type": "",
             "genre": "",
-            "sort": "",
+            "sort": "最新上傳",
             "date": "",
             "duration": "",
         }
@@ -256,7 +259,7 @@ class Search_Engine:
                     # div标签下class为"card-mobile-user"的a标签的值为author
                     a_tag = div.find("a", class_="card-mobile-user")
                     if a_tag:
-                        author: str = str(a_tag.get("title", ""))
+                        author: str = str(a_tag.text.strip())
                     else:
                         author = "unknown"
 
@@ -286,3 +289,58 @@ class Search_Engine:
 # Debug
 if __name__ == "__main__":
     Search_Engine.hanime1_search_video("PastaPaprika")
+
+# 注册搜索渠道到渠道管理器
+def register_search_channels():
+    """注册搜索渠道到渠道管理器"""
+    from Download_Engine import Download_Engine
+    
+    # 注册Xpv渠道
+    xpv_channel = Channel(
+        name="Xpv",
+        hostname_key="Xpv_Hostname",
+        download_path_key="Xpv_Download_Path",
+        search_method=Search_Engine.xpv_search_video,
+        download_methods={
+            "default": Download_Engine.xpv_download_video,
+            "pic": Download_Engine.xpv_download_comic_pic,
+            "video": Download_Engine.xpv_download_community_video
+        }
+    )
+    channel_manager.register_channel(xpv_channel)
+    
+    # 注册Iwara渠道 - 定义专用搜索函数
+    def iwara_search_wrapper(keyword):
+        """Iwara搜索包装函数"""
+        authors = Search_Engine.iw_search_author(keyword)
+        if authors:
+            return Search_Engine.iw_search_video(authors[0].id)
+        return []
+    
+    iwara_channel = Channel(
+        name="Iwara",
+        hostname_key="Iwara_Hostname",
+        download_path_key="Iwara_Download_Path",
+        search_method=iwara_search_wrapper,
+        download_methods={
+            "default": Download_Engine.iw_download_video
+        }
+    )
+    channel_manager.register_channel(iwara_channel)
+    
+    # 注册Hanime1渠道
+    hanime1_channel = Channel(
+        name="Hanime1",
+        hostname_key="Hanime1_Hostname",
+        download_path_key="Hanime1_Download_Path",
+        search_method=Search_Engine.hanime1_search_video,
+        download_methods={
+            "default": Download_Engine.hanime1_download
+        }
+    )
+    channel_manager.register_channel(hanime1_channel)
+    
+    logger.info(f"已注册 {len(channel_manager.list_channels())} 个渠道")
+
+# 自动注册渠道
+register_search_channels()

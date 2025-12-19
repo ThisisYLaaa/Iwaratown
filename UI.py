@@ -12,6 +12,9 @@ from Download_Engine import Download_Engine
 from Search_Engine import Search_Engine
 from Iwara_Login import IwaraLogin
 
+# 导入渠道管理器
+from Channel import channel_manager
+
 from typing import Callable, Optional
 from ttkbootstrap.dialogs.dialogs import Messagebox
 from tkinter import filedialog as fd
@@ -700,20 +703,10 @@ class Win_Main(tb.Window):
             #这里的get会自动断点
             task: stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video = self.download_queue.get()
             logger.info(f"队列还剩下{self.download_queue.qsize()}个任务")
-            success: bool = False
-            if isinstance(task, stru_iw_video):
-                success = Download_Engine.iw_download_video(task)
-            elif isinstance(task, stru_xpv_video):
-                success = Download_Engine.xpv_download_video(task)
-            elif isinstance(task, stru_xpv_custom):
-                if task.type == "pic":
-                    success = Download_Engine.xpv_download_comic_pic(task.url)
-                elif task.type == "video":
-                    success = Download_Engine.xpv_download_community_video(task.url)
-                else:
-                    logger.error(f"未知的自定义类型: {task.url}")
-            elif isinstance(task, stru_hanime1_video):
-                success = Download_Engine.hanime1_download(task)
+            
+            # 使用渠道管理器下载任务
+            success: bool = channel_manager.download(task)
+            
             if success:
                 self.after(0, self.update_tree)
                 self.after(0, self.progressbar.step, 1)
@@ -918,6 +911,7 @@ class Win_Main(tb.Window):
         """Executes the search operation in a background thread."""
         try:
             if source == "Iwara":
+                # Iwara搜索需要特殊处理，因为需要先搜索作者
                 authors: list[stru_iw_author] = Search_Engine.iw_search_author(keyword)
                 if not authors:
                     self.after(0, lambda: Messagebox.show_info("未找到相关作者", "提示"))
@@ -953,14 +947,9 @@ class Win_Main(tb.Window):
                     else:
                         logger.info("用户取消了作者选择")
                         self.video_list = []
-            elif source == "Xpv":
-                self.video_list = Search_Engine.xpv_search_video(keyword)  # pyright: ignore[reportAttributeAccessIssue]
-                if not self.video_list:
-                    return
-                self.urlForEdgeToOpen = self.video_list[0].get('furl', '')
-                self.selected_author = self.video_list[0].author
-            elif source == "Hanime1":
-                self.video_list = Search_Engine.hanime1_search_video(keyword)  # pyright: ignore[reportAttributeAccessIssue]
+            elif source in ["Xpv", "Hanime1"]:
+                # 使用渠道管理器进行搜索
+                self.video_list = channel_manager.search(keyword, source)
                 if not self.video_list:
                     return
                 self.urlForEdgeToOpen = self.video_list[0].get('furl', '')

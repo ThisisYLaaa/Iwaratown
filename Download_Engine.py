@@ -15,6 +15,9 @@ scraper = get_scraper()
 from Iwara_Login import IwaraLogin
 login_manager = IwaraLogin()
 
+# 导入渠道管理器
+from Channel import channel_manager
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
