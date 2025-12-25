@@ -77,7 +77,7 @@ class Search_Engine:
         video_list: list[stru_iw_video] = []
         current_page: int = 0
         try:
-            for _ in range(100):
+            for _ in range(MAX_PAGE):
                 api_url = f"https://api.iwara.tv/videos?rating=all&sort=date&page={current_page}&user={author_id}"
                 
                 logger.info(f"向Iwara API发送视频列表请求: {api_url}")
@@ -165,7 +165,7 @@ class Search_Engine:
 
             current_page: int = 0
             current_video_list = []
-            for _ in range(100):
+            for _ in range(MAX_PAGE):
                 logger.info(f"获取Xpv搜索结果页面 第{current_page}页: {redirect_url}")
                 target_url = urljoin(base_url, f"/e/search/result/index.php?page={current_page}&searchid={searchid}")
                 response = scraper.get(
@@ -236,7 +236,7 @@ class Search_Engine:
             
             current_page: int = 0
             current_video_list = []
-            for _ in range(100):
+            for _ in range(MAX_PAGE):
                 params["page"] = current_page
                 logger.info(f"获取Hanime1搜索结果页面 第{current_page}页: {get_url}")
                 logger.debug(f"params: {params}")

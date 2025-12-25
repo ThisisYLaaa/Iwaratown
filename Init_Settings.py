@@ -6,6 +6,7 @@ SETTINGS_FILE: str = f"iwtn_settings_{STVERSION}.json"
 EDGE_FILE: str = "msedge.exe"
 THEMENAME: str = "darkly"
 MYBILIURL: str = "https://space.bilibili.com/616045770"
+MAX_PAGE: int = 20
 Miao: bool = True
 
 # 这个后缀是固定的 未来可能会改变
