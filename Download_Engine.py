@@ -20,7 +20,6 @@ from Logger import get_logger
 from Settings_Manager import Settings_Manager
 
 # 导入渠道管理器
-from Channel import channel_manager
 from CScraper import get_scraper
 
 logger: logging.Logger = get_logger("下载")
@@ -77,7 +76,7 @@ class Download_Engine:
         
         try:
             os.makedirs(video.dpath, exist_ok=True)
-            save_path = os.path.join(video.dpath, f"{video.title}.mp4")
+            save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
 
             headers = DEFAULT_HEADERS.copy()
             headers["Referer"] = f"{base_url}/"
@@ -93,7 +92,7 @@ class Download_Engine:
             headers["Cache-Control"] = "no-cache"
             headers["Pragma"] = "no-cache"
 
-            logger.info(f"开始下载视频: {video.title}")
+            logger.info(f"开始下载视频: {video.savetitle}")
             logger.debug(f"headers: {headers}")
             ydl_opts: dict = {
                 "format": "bestvideo+bestaudio/best",
@@ -108,7 +107,7 @@ class Download_Engine:
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # pyright: ignore[reportArgumentType]
                 ydl.download([video_file_url])
-            logger.info(f"视频下载完成: {video.title}")
+            logger.info(f"视频下载完成: {video.savetitle}")
             return True
         except OSError as e:
             logger.error(f"文件操作错误: {e}")
@@ -329,7 +328,7 @@ class Download_Engine:
         download_link = "https:" + selected_resource['src']['download']
         file_type = selected_resource['type'].split('/')[1]
         
-        save_path = os.path.join(video.dpath, f"{video.title}.{file_type}")
+        save_path = os.path.join(video.dpath, f"{video.savetitle}.{file_type}")
 
         # 检查文件是否已存在
         if os.path.exists(save_path):
@@ -340,7 +339,7 @@ class Download_Engine:
         os.makedirs(video.dpath, exist_ok=True)
 
         # 下载视频
-        logger.info(f"开始下载视频: {video.title}")
+        logger.info(f"开始下载视频: {video.savetitle}")
         try:
             # 获取认证头
             download_headers = login_manager.get_auth_header()
@@ -354,7 +353,7 @@ class Download_Engine:
             total_size = int(response.headers.get('content-length', 0))
             
             # 创建进度跟踪器
-            tracker = DownloadProgressTracker(video.title)
+            tracker = DownloadProgressTracker(video.savetitle)
             tracker.total_size = total_size
             
             downloaded = 0
@@ -373,7 +372,7 @@ class Download_Engine:
             # 如果下载失败，删除可能创建的不完整文件
             if os.path.exists(save_path):
                 os.remove(save_path)
-            logger.error(f"下载视频失败: {video.title}, 错误: {e}")
+            logger.error(f"下载视频失败: {video.savetitle}, 错误: {e}")
             return False
 
     @staticmethod
@@ -511,16 +510,19 @@ class Download_Engine:
     @staticmethod
     def hanime1_download(video: stru_hanime1_video) -> bool:
         """下载Hanime1视频"""
+        # 更新日期
+        video.update_updatedAt()
+
         try:
             # 检查目录是否存在
             os.makedirs(video.dpath, exist_ok=True)
             
             # 构建保存路径
-            save_path = os.path.join(video.dpath, f"{video.title}.mp4")
+            save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
             
             # 如果文件已存在，跳过下载
             if os.path.exists(save_path):
-                logger.info(f"文件已存在，跳过下载: {video.title}")
+                logger.info(f"文件已存在，跳过下载: {video.savetitle}")
                 return True
             
             # 下载视频 yt-dlp
@@ -532,7 +534,7 @@ class Download_Engine:
             with yt_dlp.YoutubeDL(opts) as ydl:  # pyright: ignore[reportArgumentType]
                 ydl.download([video.url])
                 
-            logger.info(f"下载完成: {video.title}")
+            logger.info(f"下载完成: {video.savetitle}")
             return True
         except Exception as e:
             logger.error(f"下载视频失败 {video.url}: {e}")

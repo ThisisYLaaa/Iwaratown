@@ -742,7 +742,11 @@ class Win_Main(tb.Window):
         self.entry_custom_url.pack(side='left', padx=5)
         tb.Button(frame_toolbar, text="自定义下载", 
                   command=self.start_download_custom).pack(side='left', padx=5)
-        tb.Button(frame_toolbar, text="一键检查更新", command=self.check_updates).pack(side='left', padx=5)
+        
+        frame_toolbar2 = tb.Frame(self)
+        frame_toolbar2.pack(fill=tk.X, pady=5, padx=5)
+        tb.Button(frame_toolbar2, text="一键检查更新", command=self.check_updates).pack(side='left', padx=5)
+        tb.Button(frame_toolbar2, text="更新Hanime1日期", command=self.update_hanime1_UpdateAt).pack(side='left', padx=5)
 
         frame_search = tb.Frame(self)
         frame_search.pack(padx=5, pady=5, anchor=tk.NW, fill=tk.X)
@@ -799,7 +803,7 @@ class Win_Main(tb.Window):
         
         # 插入新项
         for video in self.video_list:
-            video_path: str = os.path.join(video.dpath, video.title + ".mp4")
+            video_path: str = os.path.join(video.dpath, video.savetitle + ".mp4")
             self.tree.insert('', 'end', values=(
                 video.updatedAt, 
                 video.title, "已下载" if os.path.isfile(video_path) else "未下载", 
@@ -959,7 +963,7 @@ class Win_Main(tb.Window):
             
             if self.url_for_edge_to_open:
                 self.after(0, lambda: self.btn_edge.configure(state=tk.NORMAL))
-                self.after(0, lambda: self.btn_local.configure(state=tk.NORMAL))
+            self.after(0, lambda: self.btn_local.configure(state=tk.NORMAL))
 
             self.dumpfunction_update_old_title_video()
             if self.video_list:
@@ -1081,6 +1085,25 @@ class Win_Main(tb.Window):
             
             logger.info("一键检查更新完成")
 
+    def update_hanime1_UpdateAt(self) -> None:
+        """更新Hanime1视频的UpdateAt属性"""
+        def th() -> None:
+            logger.info("开始更新Hanime1视频的UpdateAt属性")
+            
+            # 获取所有视频
+            videos: list[stru_hanime1_video] = [video for video in self.video_list if video.source == "Hanime1"]  # pyright: ignore[reportAssignmentType]
+            
+            # 更新Hanime1视频的UpdateAt属性
+            for video in videos:
+                video.update_updatedAt()
+                logger.info(f"更新视频 {video.title} 的UpdateAt属性为 {video.updatedAt}")
+            
+            logger.info("更新Hanime1视频的UpdateAt属性完成")
+            self.after(0, self.update_tree)
+        
+        # 在后台线程中执行更新
+        threading.Thread(target=th, daemon=True).start()
+        
 if __name__ == "__main__":
     try:
         app = Win_Main()
