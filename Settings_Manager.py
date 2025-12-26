@@ -1,6 +1,7 @@
 import json
 import logging
 
+from Custom_Struc import *
 from Init_Settings import *
 from Logger import get_logger
 
@@ -98,3 +99,84 @@ class Settings_Manager:
         """
         token = self.get_iwara_token()
         return token is not None and token.strip() != ""
+
+class Cache_Manager:
+    _Cache_Manager_instance = None
+    _Cache_Manager_initialized = False
+
+    def __new__(cls):
+        if cls._Cache_Manager_instance is None:
+            cls._Cache_Manager_instance = super(Cache_Manager, cls).__new__(cls)
+        return cls._Cache_Manager_instance
+
+    def __init__(self) -> None:
+        if Cache_Manager._Cache_Manager_initialized:
+            return
+        self.cache: dict = {}
+        Cache_Manager._Cache_Manager_initialized = True
+        self.load_cache()
+
+    def load_cache(self) -> None:
+        """加载缓存"""
+        logger.info("加载缓存")
+        try:
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                self.cache = json.load(f)
+            logger.info("缓存加载成功")
+        except FileNotFoundError:
+            logger.error("缓存文件未找到")
+        except json.JSONDecodeError:
+            logger.error("缓存文件格式错误")
+        except Exception as e:
+            logger.error(f"加载缓存时发生未知错误: {e}")
+            self.cache = {}
+    
+    def save_cache(self) -> None:
+        """保存缓存"""
+        logger.info("保存缓存")
+        try:
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.cache, f, indent=4, ensure_ascii=False)
+            logger.info("缓存保存成功")
+        except PermissionError as e:
+            logger.error(f"保存缓存时权限错误: {e}")
+        except IOError as e:
+            logger.error(f"保存缓存时IO错误: {e}")
+        except Exception as e:
+            logger.error(f"保存缓存时发生未知错误: {e}")
+    
+    def get_cache(self, channel_name: str) -> dict:
+        """获取指定渠道的缓存
+        
+        Args:
+            channel_name: 渠道名称
+            
+        Returns:
+            dict: 渠道的缓存字典
+        """
+        return self.cache.get(channel_name, {})
+    
+    def set_cache(self, channel_name: str, cache: list) -> None:
+        """设置指定渠道的缓存
+        
+        Args:
+            channel_name: 渠道名称
+            cache: 要设置的缓存字典
+        """
+        # 将视频类转换成字典
+        cache_dict = {}
+        for video in cache:
+            cache_dict[video.url] = video.__dict__
+        
+        # 别改这个
+        for url, cache_video in cache_dict.items():
+            for key, value in cache_video.items():
+                if value:
+                    self.cache[channel_name][url][key] = value
+                else:
+                    pass
+        self.save_cache()
+
+
+sm: Settings_Manager = Settings_Manager()
+cm: Cache_Manager = Cache_Manager()

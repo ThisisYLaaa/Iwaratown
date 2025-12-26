@@ -1,5 +1,7 @@
 from typing import Callable, Dict, List, Any, Optional
 import logging
+
+from Settings_Manager import sm, cm
 from Logger import get_logger
 logger: logging.Logger = get_logger("渠道管理")
 
@@ -116,7 +118,7 @@ class ChannelManager:
         return self.channels.get(name)
     
     def list_channels(self) -> List[str]:
-        """列出所有注册的渠道名称
+        """列出所有已注册渠道的名称
         
         Returns:
             List[str]: 渠道名称列表
@@ -147,7 +149,7 @@ class ChannelManager:
         return False
     
     def search(self, keyword: str, channel_name: str) -> List[Any]:
-        """搜索视频
+        """搜索指定渠道的内容
         
         Args:
             keyword: 搜索关键词
@@ -158,9 +160,17 @@ class ChannelManager:
         """
         channel = self.get_channel(channel_name)
         if channel:
-            return channel.search_method(keyword)
+            result: list = channel.search_method(keyword)
+            if result:
+                cm.set_cache(channel_name, result)
+                logger.info(f"从渠道 {channel_name} 获取到 {len(result)} 条搜索结果")
+                return result
+            else:
+                logger.info(f"从渠道 {channel_name} 搜索 {keyword} 未获取到结果")
+                return []
         logger.error(f"渠道 {channel_name} 不存在")
         return []
 
 # 创建全局渠道管理器实例
 channel_manager = ChannelManager()
+

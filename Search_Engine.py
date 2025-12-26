@@ -15,18 +15,12 @@ from bs4 import BeautifulSoup
 
 from Custom_Struc import *
 from Init_Settings import *
-from Iwara_Login import IwaraLogin
+from Iwara_Login import il
 from Logger import get_logger
-from Settings_Manager import Settings_Manager
-
-# 导入渠道管理器
-from Channel import Channel, channel_manager
-from CScraper import get_scraper
-
 logger: logging.Logger = get_logger("搜索")
-scraper = get_scraper()
-sm: Settings_Manager = Settings_Manager()
-iwara_login = IwaraLogin()
+from Settings_Manager import sm, cm
+from Channel import Channel, channel_manager
+from CScraper import scraper
 
 
 class Search_Engine:
@@ -38,7 +32,7 @@ class Search_Engine:
         try:
             logger.info(f"向Iwara API发送作者搜索请求: {api_url}")
             # 获取认证头
-            headers = iwara_login.get_auth_header()
+            headers = il.get_auth_header()
             if headers:
                 logger.debug(f"添加认证token到请求头")
             
@@ -82,7 +76,7 @@ class Search_Engine:
                 
                 logger.info(f"向Iwara API发送视频列表请求: {api_url}")
                 # 获取认证头
-                headers = iwara_login.get_auth_header()
+                headers = il.get_auth_header()
                 if headers:
                     logger.debug(f"添加认证token到请求头")
                 

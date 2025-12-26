@@ -2,17 +2,13 @@ import datetime, os, re
 from typing import Any
 from bs4 import BeautifulSoup
 
-from CScraper import get_scraper
-scraper = get_scraper()
+from CScraper import scraper
 
 from Logger import get_logger
 logger = get_logger("视频")
 
 from Init_Settings import *
-from Settings_Manager import Settings_Manager
-
-# 初始化设置管理器
-sm: Settings_Manager = Settings_Manager()
+from Settings_Manager import sm, cm
 
 class stru_iw_author:
     def __init__(self, data: dict):
@@ -125,7 +121,7 @@ class stru_hanime1_video:
         for file in os.listdir(self.dpath):
             if file.endswith(".mp4") and self.title in file:
                 save_path = os.path.join(self.dpath, file)
-                logger.info(f"找到本地文件: {save_path}")
+                logger.debug(f"找到本地文件: {save_path}")
                 break
         else:
             save_path = os.path.join(self.dpath, f"{self.title}.mp4")

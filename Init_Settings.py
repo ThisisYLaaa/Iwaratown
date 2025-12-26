@@ -3,6 +3,7 @@ import os
 # 写死的配置
 STVERSION: str = "1.0.1"
 SETTINGS_FILE: str = f"iwtn_settings_{STVERSION}.json"
+CACHE_FILE: str = f"iwtn_cache_{STVERSION}.json"
 EDGE_FILE: str = "msedge.exe"
 THEMENAME: str = "darkly"
 MYBILIURL: str = "https://space.bilibili.com/616045770"

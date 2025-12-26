@@ -13,16 +13,12 @@ import tkinter as tk
 
 from Custom_Struc import *
 from Init_Settings import *
-from Iwara_Login import IwaraLogin
+from Iwara_Login import il
 from Logger import get_logger
-from Search_Engine import Search_Engine
-from Settings_Manager import Settings_Manager
-
-# 导入渠道管理器
-from Channel import channel_manager
-
 logger: logging.Logger = get_logger("⭐Iwaratown⭐")
-sm: Settings_Manager = Settings_Manager()
+from Search_Engine import Search_Engine
+from Settings_Manager import sm, cm
+from Channel import channel_manager
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""
@@ -318,7 +314,7 @@ class Window_Login(tb.Toplevel):
         self.master = master
         self.title("登录Iwara")
         self.geometry("450x350")
-        self.login_manager = IwaraLogin()
+        self.login_manager = il
         
         # 创建并配置界面组件
         self.create_widgets()
@@ -804,6 +800,13 @@ class Win_Main(tb.Window):
         # 插入新项
         for video in self.video_list:
             video_path: str = os.path.join(video.dpath, video.savetitle + ".mp4")
+            # 如果视频的某个属性为空 则从缓存中读取
+            if not all([value for value in video.__dict__.values()]):  # 如果视频存在空属性
+                cache: dict = cm.get_cache(video.source)[video.url]  # 从缓存中获取视频信息
+                for key, value in cache.items():
+                    if value and not getattr(video, key):  # 如果缓存值不为空 且 视频属性为空
+                        setattr(video, key, value)
+
             self.tree.insert('', 'end', values=(
                 video.updatedAt, 
                 video.title, "已下载" if os.path.isfile(video_path) else "未下载", 
@@ -950,13 +953,14 @@ class Win_Main(tb.Window):
                     else:
                         logger.info("用户取消了作者选择")
                         self.video_list = []
-            elif source in ["Xpv", "Hanime1"]:
+            elif source in channel_manager.list_channels():
                 # 使用渠道管理器进行搜索
                 self.video_list = channel_manager.search(keyword, source)
                 if not self.video_list:
                     return
-                self.url_for_edge_to_open = self.video_list[0].get('furl', '')
-                self.selected_author = self.video_list[0].author
+                # 安全地获取第一个视频的furl属性
+                self.url_for_edge_to_open = getattr(self.video_list[0], 'furl', '')
+                self.selected_author = getattr(self.video_list[0], 'author', '')
             else:
                 logger.warning(f"未知的来源: {source}")
                 self.video_list = []
@@ -1099,6 +1103,7 @@ class Win_Main(tb.Window):
                 logger.info(f"更新视频 {video.title} 的UpdateAt属性为 {video.updatedAt}")
             
             logger.info("更新Hanime1视频的UpdateAt属性完成")
+            cm.set_cache("Hanime1", videos)
             self.after(0, self.update_tree)
         
         # 在后台线程中执行更新

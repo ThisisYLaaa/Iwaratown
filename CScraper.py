@@ -20,3 +20,5 @@ def get_scraper():
             }
         )
     return _CScraper_instance
+
+scraper = get_scraper()

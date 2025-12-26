@@ -15,17 +15,11 @@ import yt_dlp
 from Custom_Struc import *
 from DownloadProgressTracker import DownloadProgressTracker
 from Init_Settings import *
-from Iwara_Login import IwaraLogin
+from Iwara_Login import il
 from Logger import get_logger
-from Settings_Manager import Settings_Manager
-
-# 导入渠道管理器
-from CScraper import get_scraper
-
 logger: logging.Logger = get_logger("下载")
-scraper = get_scraper()
-sm: Settings_Manager = Settings_Manager()
-login_manager = IwaraLogin()
+from Settings_Manager import sm, cm
+from CScraper import scraper
 
 class Download_Engine:
     @staticmethod
@@ -241,7 +235,7 @@ class Download_Engine:
             logger.info(f"获取视频信息: {api_url}")
             
             # 获取认证头
-            headers = login_manager.get_auth_header()
+            headers = il.get_auth_header()
             if headers:
                 logger.debug("已添加登录token到请求头")
             
@@ -278,7 +272,7 @@ class Download_Engine:
         # 获取视频资源列表
         try:
             # 获取认证头
-            resources_headers = login_manager.get_auth_header()
+            resources_headers = il.get_auth_header()
             if resources_headers:
                 logger.debug("已添加登录token到资源请求头")
                 
@@ -342,7 +336,7 @@ class Download_Engine:
         logger.info(f"开始下载视频: {video.savetitle}")
         try:
             # 获取认证头
-            download_headers = login_manager.get_auth_header()
+            download_headers = il.get_auth_header()
             if download_headers:
                 logger.debug("已添加登录token到下载请求头")
                 

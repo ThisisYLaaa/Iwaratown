@@ -1,4 +1,4 @@
-import cloudscraper
+from CScraper import scraper
 from requests.auth import AuthBase
 import json
 
@@ -22,7 +22,7 @@ class IwaraLogin:
     提供登录、检查token有效性、刷新token等功能
     """
     def __init__(self):
-        self.scraper = cloudscraper.create_scraper()
+        self.scraper = scraper
         self.api_url: str = api_url
         self.token: str = ""
         self.user_info: dict = {}
@@ -193,3 +193,6 @@ class IwaraLogin:
         if self.is_logged_in() and self.user_info is None:
             self.user_info = self._get_user_info()
         return self.user_info
+
+il: IwaraLogin = IwaraLogin()
+
