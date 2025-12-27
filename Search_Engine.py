@@ -278,10 +278,6 @@ class Search_Engine:
             logger.error(f"处理Hanime1搜索结果时发生未知错误: {e}")
         return []
 
-# Debug
-if __name__ == "__main__":
-    Search_Engine.hanime1_search_video("PastaPaprika")
-
 # 注册搜索渠道到渠道管理器
 def register_search_channels():
     """注册搜索渠道到渠道管理器"""
