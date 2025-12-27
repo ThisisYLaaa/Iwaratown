@@ -112,7 +112,7 @@ class Cache_Manager:
     def __init__(self) -> None:
         if Cache_Manager._Cache_Manager_initialized:
             return
-        self.cache: dict = {}
+        self.cache: dict[str, dict[str, dict]] = {}
         Cache_Manager._Cache_Manager_initialized = True
         self.load_cache()
 
@@ -169,7 +169,14 @@ class Cache_Manager:
             cache_dict[video.url] = video.__dict__
         
         # 别改这个
+        url: str
+        cache_video: dict
         for url, cache_video in cache_dict.items():
+            if not channel_name in self.cache.keys():
+                self.cache[channel_name] = {}
+            if not url in self.cache[channel_name].keys():
+                self.cache[channel_name][url] = cache_video
+                continue
             for key, value in cache_video.items():
                 if value:
                     self.cache[channel_name][url][key] = value

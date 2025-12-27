@@ -1101,6 +1101,7 @@ class Win_Main(tb.Window):
             for video in videos:
                 video.update_updatedAt()
                 logger.info(f"更新视频 {video.title} 的UpdateAt属性为 {video.updatedAt}")
+                self.after(0, self.update_tree)
             
             logger.info("更新Hanime1视频的UpdateAt属性完成")
             cm.set_cache("Hanime1", videos)

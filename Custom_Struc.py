@@ -51,6 +51,8 @@ class stru_iw_video:
         self.dpath: str = sm.settings.get("Iwara_Download_Path", DEFAULT_SETTINGS["Iwara_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
+        os.makedirs(self.dpath, exist_ok=True)
+
     def get_video_path_url(self) -> str:
         return f"https://www.iwara.tv/video/{self.id}"
     
@@ -72,6 +74,8 @@ class stru_xpv_video:
         self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
         self.dpath: str = sm.settings.get("Xpv_Download_Path", DEFAULT_SETTINGS["Xpv_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
+
+        os.makedirs(self.dpath, exist_ok=True)
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
@@ -111,6 +115,8 @@ class stru_hanime1_video:
         self.dpath: str = sm.settings.get("Hanime1_Download_Path", DEFAULT_SETTINGS["Hanime1_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
+        os.makedirs(self.dpath, exist_ok=True)
+
         self.get_updatedAt_from_file()
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -134,6 +140,8 @@ class stru_hanime1_video:
         self.update_savetitle(self.updatedAt)
     
     def update_savetitle(self, updatedAt: str):
+        if not updatedAt:
+            return
         self.updatedAt = updatedAt
         self.savetitle = "".join([f"[{self.updatedAt}]", self.title])
         self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
