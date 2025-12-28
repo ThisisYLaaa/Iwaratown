@@ -31,6 +31,7 @@ class stru_iw_author:
 
 class stru_iw_video:
     def __init__(self, data: dict):
+        # 无关紧要
         self.status: str = data.get("status", "active").strip()
         self.rating: str = data.get("rating", "ecchi").strip()
         self.liked: bool = data.get("liked", False)
@@ -39,15 +40,19 @@ class stru_iw_video:
         self.user: stru_iw_author = stru_iw_author(data.get("user", {}))
         self.createdAt: str = data.get("createdAt", "").strip()
 
-        self.source: str = "Iwara"
+        # iwara必须
         self.id: str = data.get("id", "")
+
+        # 频道必须
+        # self.furl: str = ""  Iwara不需要furl
+        self.source: str = "Iwara"
         self.url: str = self.get_video_path_url()
-        self.author: str = self.user.username
-        self.updatedAt: str = data.get("updatedAt", "").strip()
-        self.numViews: int = data.get("numViews", 0)
         self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
         self.savetitle: str = "".join([f"[{datetime.datetime.fromisoformat(self.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")}]", data.get("title", "").strip()])
         self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
+        self.author: str = self.user.username
+        self.updatedAt: str = data.get("updatedAt", "").strip()
+        self.numViews: int = data.get("numViews", 0)
         self.dpath: str = sm.settings.get("Iwara_Download_Path", DEFAULT_SETTINGS["Iwara_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
@@ -61,17 +66,17 @@ class stru_iw_video:
 
 class stru_xpv_video:
     def __init__(self, data: dict):
+        # 频道必须
         self.furl: str = data.get("furl", "").strip()
-
         self.source: str = "Xpv"
         self.url: str = f"{sm.settings['Xpv_Hostname']}{data.get('url', '')}"
+        self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
+        self.savetitle: str = "".join([f"[{self.updatedAt}]", data.get("title", "").strip()])
+        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
         self.author: str = data.get("author", "").strip()
         self.updatedAt: str = data.get("updatedAt", "").strip()
         self.updatedAt = datetime.datetime.fromisoformat(self.updatedAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")
         self.numViews: int = data.get("numViews", 0)
-        self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
-        self.savetitle: str = "".join([f"[{self.updatedAt}]", data.get("title", "").strip()])
-        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
         self.dpath: str = sm.settings.get("Xpv_Download_Path", DEFAULT_SETTINGS["Xpv_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
@@ -85,6 +90,7 @@ class stru_xpv_video:
 
 class stru_xpv_custom:
     def __init__(self, data: dict):
+        # xpv变种
         self.url: str = data.get('url', '')
         self.type: str = self.get_type()
         self.source: str = "Xpv"  # 添加source属性，确保渠道管理器能识别
@@ -101,17 +107,16 @@ class stru_xpv_custom:
 
 class stru_hanime1_video:
     def __init__(self, data: dict):
+        # 必须
         self.furl: str = data.get("furl", "").strip()
+        self.source: str = "Hanime1"
+        self.url: str = data.get("url", "").strip()
         self.title: str = data.get("title", "").strip()
         self.title = re.sub(r'[\\/*?:"<>|]', "_", self.title)
         self.savetitle: str = self.title
-        self.url: str = data.get("url", "").strip()
-
-        self.source: str = "Hanime1"
         self.author: str = data.get("author", "").strip()
         self.updatedAt: str = data.get("updatedAt", "").strip()  # 一般没有
         self.numViews: int = data.get("numViews", 0)
-        
         self.dpath: str = sm.settings.get("Hanime1_Download_Path", DEFAULT_SETTINGS["Hanime1_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
