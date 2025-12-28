@@ -56,7 +56,6 @@ XPV_CUSTOM_MAP: dict = {
 # 可配置的配置 - 保持向后兼容性
 DEFAULT_SETTINGS: dict = {
     "Ver": STVERSION,
-    "ForceUsingXpxHostname": True,
     "Xpv_Pic_Download_RelativePath": "#Pics",
     "Favor": {
         "xpv": [],
