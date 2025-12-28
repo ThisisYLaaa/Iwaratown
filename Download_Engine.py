@@ -505,7 +505,7 @@ class Download_Engine:
     def hanime1_download(video: stru_hanime1_video) -> bool:
         """下载Hanime1视频"""
         # 更新日期
-        video.update_updatedAt()
+        video._update_updatedAt_from_url()
 
         try:
             # 检查目录是否存在
@@ -523,7 +523,7 @@ class Download_Engine:
             opts = {
                 "outtmpl": save_path,
                 "quiet": True,
-                "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+                "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"]),
             }
             with yt_dlp.YoutubeDL(opts) as ydl:  # pyright: ignore[reportArgumentType]
                 ydl.download([video.url])

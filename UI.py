@@ -83,51 +83,45 @@ class Window_Settings(tb.Toplevel):
         super().__init__() # --- Modified Code: Correctly initialize Toplevel ---
         self.master = master
         self.title("设置")
-        self.geometry("800x450")
+        self.geometry("800x550")
+        # 存储动态创建的控件
+        self.hostname_entries: dict[str, tb.Entry] = {}
+        self.api_hostname_entries: dict[str, tb.Entry] = {}
+        self.download_path_entries: dict[str, tb.Entry] = {}
         self.create_widgets()
         self.fill_entry()
 
     def create_widgets(self) -> None:
         """Creates the widgets for the settings window."""
-        frame_xpv_hostname = tb.Frame(self)
-        frame_xpv_hostname.pack(anchor=tk.NW, pady=5, padx=10)
-        tb.Label(frame_xpv_hostname, text="Xpv主机名:").pack(side='left')
-        self.entry_xpv_hostname = tb.Entry(frame_xpv_hostname, width=50)
-        self.entry_xpv_hostname.pack(side='left', padx=5)
-
-        frame_iwara_hostname = tb.Frame(self)
-        frame_iwara_hostname.pack(anchor=tk.NW, pady=5, padx=10)
-        tb.Label(frame_iwara_hostname, text="Iwara主机名:").pack(side='left')
-        self.entry_iwara_hostname = tb.Entry(frame_iwara_hostname, width=50)
-        self.entry_iwara_hostname.pack(side='left', padx=5)
-
-        frame_hanime1_hostname = tb.Frame(self)
-        frame_hanime1_hostname.pack(anchor=tk.NW, pady=5, padx=10)
-        tb.Label(frame_hanime1_hostname, text="Hanime1主机名:").pack(side='left')
-        self.entry_hanime1_hostname = tb.Entry(frame_hanime1_hostname, width=50)
-        self.entry_hanime1_hostname.pack(side='left', padx=5)
+        # 动态创建每个频道的设置项
+        for channel_name, config in CHANNELS_CONFIG.items():
+            # 创建主机名设置
+            frame_hostname = tb.Frame(self)
+            frame_hostname.pack(anchor=tk.NW, pady=5, padx=10)
+            tb.Label(frame_hostname, text=f"{channel_name}主机名:").pack(side='left')
+            entry_hostname = tb.Entry(frame_hostname, width=50)
+            entry_hostname.pack(side='left', padx=5)
+            self.hostname_entries[channel_name] = entry_hostname
+            
+            # 创建API主机名设置（如果有）
+            if "api_hostname_key" in config:
+                frame_api_hostname = tb.Frame(self)
+                frame_api_hostname.pack(anchor=tk.NW, pady=5, padx=10)
+                tb.Label(frame_api_hostname, text=f"{channel_name} API主机名:").pack(side='left')
+                entry_api_hostname = tb.Entry(frame_api_hostname, width=50)
+                entry_api_hostname.pack(side='left', padx=5)
+                self.api_hostname_entries[channel_name] = entry_api_hostname
+            
+            # 创建下载路径设置
+            frame_path = tb.Frame(self)
+            frame_path.pack(anchor=tk.NW, pady=5, padx=10)
+            tb.Label(frame_path, text=f"{channel_name}下载路径:").pack(side='left')
+            entry_path = tb.Entry(frame_path, width=80)
+            entry_path.pack(side='left', padx=5)
+            tb.Button(frame_path, text="浏览", command=lambda entry=entry_path: self.browse_directory(entry)).pack(side='left')
+            self.download_path_entries[channel_name] = entry_path
         
-        frame_xpv_path = tb.Frame(self)
-        frame_xpv_path.pack(anchor=tk.NW, pady=5, padx=10)
-        tb.Label(frame_xpv_path, text="Xpv下载路径:").pack(side='left')
-        self.entry_xpv_path = tb.Entry(frame_xpv_path, width=80)
-        self.entry_xpv_path.pack(side='left', padx=5)
-        tb.Button(frame_xpv_path, text="浏览", command=lambda: self.browse_directory(self.entry_xpv_path)).pack(side='left')
-
-        frame_iwara_path = tb.Frame(self)
-        frame_iwara_path.pack(anchor=tk.NW, pady=5, padx=10)
-        tb.Label(frame_iwara_path, text="Iwara下载路径:").pack(side='left')
-        self.entry_iwara_path = tb.Entry(frame_iwara_path, width=80)
-        self.entry_iwara_path.pack(side='left', padx=5)
-        tb.Button(frame_iwara_path, text="浏览", command=lambda: self.browse_directory(self.entry_iwara_path)).pack(side='left')
-
-        frame_hanime1_path = tb.Frame(self)
-        frame_hanime1_path.pack(anchor=tk.NW, pady=5, padx=10)
-        tb.Label(frame_hanime1_path, text="Hanime1下载路径:").pack(side='left')
-        self.entry_hanime1_path = tb.Entry(frame_hanime1_path, width=80)
-        self.entry_hanime1_path.pack(side='left', padx=5)
-        tb.Button(frame_hanime1_path, text="浏览", command=lambda: self.browse_directory(self.entry_hanime1_path)).pack(side='left')
-
+        # 自定义下载路径
         frame_custom_path = tb.Frame(self)
         frame_custom_path.pack(anchor=tk.NW, pady=5, padx=10)
         tb.Label(frame_custom_path, text="自定义下载路径:").pack(side='left')
@@ -135,17 +129,20 @@ class Window_Settings(tb.Toplevel):
         self.entry_custom_path.pack(side='left', padx=5)
         tb.Button(frame_custom_path, text="浏览", command=lambda: self.browse_directory(self.entry_custom_path)).pack(side='left')
         
+        # 最大线程数
         frame_max_threads = tb.Frame(self)
         frame_max_threads.pack(anchor=tk.NW, pady=5, padx=10)
         tb.Label(frame_max_threads, text="最大线程数:").pack(side='left')
         self.entry_max_threads = tb.Entry(frame_max_threads, width=5)
         self.entry_max_threads.pack(side='left', padx=5)
 
+        # 检查证书
         frame_check_cert = tb.Frame(self)
         frame_check_cert.pack(anchor=tk.NW, pady=5, padx=10)
         self.check_cert_var = tb.BooleanVar()
         tb.Checkbutton(frame_check_cert, text="检查证书", variable=self.check_cert_var).pack(side='left')
 
+        # 保存按钮
         tb.Button(self, text="保存", command=self.on_close).pack(anchor=tk.NW, padx=5, pady=10)
 
     def browse_directory(self, entry: tb.Entry) -> None:
@@ -159,23 +156,47 @@ class Window_Settings(tb.Toplevel):
         self.focus_set()
 
     def fill_entry(self) -> None:
-        self.entry_xpv_hostname.insert(0, sm.settings.get("Xpv_Hostname", DEFAULT_SETTINGS["Xpv_Hostname"]))
-        self.entry_iwara_hostname.insert(0, sm.settings.get("Iwara_Hostname", DEFAULT_SETTINGS["Iwara_Hostname"]))
-        self.entry_hanime1_hostname.insert(0, sm.settings.get("Hanime1_Hostname", DEFAULT_SETTINGS["Hanime1_Hostname"]))
-        self.entry_xpv_path.insert(0, sm.settings.get("Xpv_Download_Path", DEFAULT_SETTINGS["Xpv_Download_Path"]))
-        self.entry_iwara_path.insert(0, sm.settings.get("Iwara_Download_Path", DEFAULT_SETTINGS["Iwara_Download_Path"]))
-        self.entry_hanime1_path.insert(0, sm.settings.get("Hanime1_Download_Path", DEFAULT_SETTINGS["Hanime1_Download_Path"]))
+        # 填充每个频道的设置
+        for channel_name, config in CHANNELS_CONFIG.items():
+            # 填充主机名
+            if channel_name in self.hostname_entries:
+                hostname_key = config["hostname_key"]
+                self.hostname_entries[channel_name].insert(0, sm.settings.get(hostname_key, DEFAULT_SETTINGS[hostname_key]))
+            
+            # 填充API主机名（如果有）
+            if channel_name in self.api_hostname_entries and "api_hostname_key" in config:
+                api_hostname_key = config["api_hostname_key"]
+                self.api_hostname_entries[channel_name].insert(0, sm.settings.get(api_hostname_key, DEFAULT_SETTINGS[api_hostname_key]))
+            
+            # 填充下载路径
+            if channel_name in self.download_path_entries:
+                download_path_key = config["download_path_key"]
+                self.download_path_entries[channel_name].insert(0, sm.settings.get(download_path_key, DEFAULT_SETTINGS[download_path_key]))
+        
+        # 填充通用设置
         self.entry_custom_path.insert(0, sm.settings.get("Custom_Download_Path", DEFAULT_SETTINGS["Custom_Download_Path"]))
         self.entry_max_threads.insert(0, str(sm.settings.get("Max_Threads", DEFAULT_SETTINGS["Max_Threads"])))
         self.check_cert_var.set(sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"]))
 
     def on_close(self) -> None:
-        sm.settings["Xpv_Hostname"] = self.entry_xpv_hostname.get().strip()
-        sm.settings["Iwara_Hostname"] = self.entry_iwara_hostname.get().strip()
-        sm.settings["Hanime1_Hostname"] = self.entry_hanime1_hostname.get().strip()
-        sm.settings["Xpv_Download_Path"] = self.entry_xpv_path.get().strip()
-        sm.settings["Iwara_Download_Path"] = self.entry_iwara_path.get().strip()
-        sm.settings["Hanime1_Download_Path"] = self.entry_hanime1_path.get().strip()
+        # 保存每个频道的设置
+        for channel_name, config in CHANNELS_CONFIG.items():
+            # 保存主机名
+            if channel_name in self.hostname_entries:
+                hostname_key = config["hostname_key"]
+                sm.settings[hostname_key] = self.hostname_entries[channel_name].get().strip()
+            
+            # 保存API主机名（如果有）
+            if channel_name in self.api_hostname_entries and "api_hostname_key" in config:
+                api_hostname_key = config["api_hostname_key"]
+                sm.settings[api_hostname_key] = self.api_hostname_entries[channel_name].get().strip()
+            
+            # 保存下载路径
+            if channel_name in self.download_path_entries:
+                download_path_key = config["download_path_key"]
+                sm.settings[download_path_key] = self.download_path_entries[channel_name].get().strip()
+        
+        # 保存通用设置
         sm.settings["Custom_Download_Path"] = self.entry_custom_path.get().strip()
         sm.settings["Check_Cert"] = self.check_cert_var.get()
 
@@ -191,11 +212,11 @@ class Window_Settings(tb.Toplevel):
 
 class Window_CheckUpdate(tb.Toplevel):
     """检查更新窗口，用于显示未下载的新视频"""
-    def __init__(self, master: "Win_Main", new_videos: list[stru_xpv_video]) -> None:
+    def __init__(self, master: "Win_Main", new_videos: list[stru_hanime1_video]) -> None:
         super().__init__()
         self.master: "Win_Main" = master  # pyright: ignore[reportIncompatibleVariableOverride]
         self.new_videos = new_videos
-        self.sorted_videos: list[stru_xpv_video] = []  # 添加排序后的视频列表
+        self.sorted_videos: list[stru_hanime1_video] = []  # 添加排序后的视频列表
         self.title("检查更新结果")
         self.geometry("1000x600")
         self.create_widgets()
@@ -256,9 +277,9 @@ class Window_CheckUpdate(tb.Toplevel):
 
         # 按照作者正序，日期倒序排序
         self.sorted_videos = sorted(self.new_videos, key=lambda v: (v.author, v.get_updatedAt_timestamp()), reverse=True)
-
+        
         # 插入数据
-        video: stru_xpv_video
+        video: stru_hanime1_video
         for video in self.sorted_videos:
             self.tree.insert('', 'end', values=(
                 video.author,
@@ -441,8 +462,18 @@ class Window_Favor(tb.Toplevel):
         self.title("收藏夹")
         self.geometry("600x700")
 
-        self.favor_data: dict = sm.settings.get("Favor", {"xpv": [], "iwara": [], "hanime1": []})
-        self.current_channel = "xpv"  # 默认渠道
+        # 获取所有已注册频道
+        self.channels = [channel.lower() for channel in channel_manager.list_channels()]
+        # 初始化收藏数据，确保每个频道都有对应的列表
+        self.favor_data: dict = sm.settings.get("Favor", {})
+        for channel in self.channels:
+            if channel not in self.favor_data:
+                self.favor_data[channel] = []
+        self.current_channel = self.channels[0] if self.channels else ""  # 默认渠道
+
+        # 存储动态创建的组件
+        self.frames: dict[str, tb.Frame] = {}
+        self.trees: dict[str, tb.Treeview] = {}
 
         self.create_widgets()
     
@@ -459,92 +490,56 @@ class Window_Favor(tb.Toplevel):
         self.notebook = tb.Notebook(self)
         self.notebook.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
         
-        self.frame_xpv: tb.Frame = tb.Frame(self.notebook)
-        self.notebook.add(self.frame_xpv, text="Xpv")
-        self.frame_iwara: tb.Frame = tb.Frame(self.notebook)
-        self.notebook.add(self.frame_iwara, text="Iwara")
-        self.frame_hanime1: tb.Frame = tb.Frame(self.notebook)
-        self.notebook.add(self.frame_hanime1, text="Hanime1")
+        # 动态创建频道标签页
+        for channel in self.channels:
+            # 创建标签页框架
+            frame = tb.Frame(self.notebook)
+            self.frames[channel] = frame
+            self.notebook.add(frame, text=channel.capitalize())
+            
+            # 创建Treeview
+            tree = tb.Treeview(frame, columns=("author"), show='headings', height=15)
+            tree.heading("author", text="作者")
+            tree.column("author", stretch=True)
+            
+            # 添加滚动条
+            vsb = tb.Scrollbar(frame, orient="vertical", command=tree.yview)
+            tree.configure(yscrollcommand=vsb.set)
+            tree.bind("<MouseWheel>", lambda e, tree=tree: tree.yview_scroll(int(-1 * (e.delta / 120) * 2), "units"))
+            
+            # 布局
+            tree.grid(row=0, column=0, sticky='nsew')
+            vsb.grid(row=0, column=1, sticky='ns')
+            frame.grid_rowconfigure(0, weight=1)
+            frame.grid_columnconfigure(0, weight=1)
+            
+            # 存储tree实例
+            self.trees[channel] = tree
+            
+            # 填充数据
+            for author in self.favor_data.get(channel, []):
+                tree.insert("", "end", values=(author,))
+            
+            # 绑定双击事件
+            tree.bind("<Double-1>", self.on_select)
         
-        # 为Xpv标签页创建列表
-        self.tree_xpv = tb.Treeview(self.frame_xpv, columns=("author"), show='headings', height=15)
-        self.tree_xpv.heading("author", text="作者")
-        self.tree_xpv.column("author", stretch=True)
-        
-        vsb_xpv = tb.Scrollbar(self.frame_xpv, orient="vertical", command=self.tree_xpv.yview)
-        self.tree_xpv.configure(yscrollcommand=vsb_xpv.set)
-        self.tree_xpv.bind("<MouseWheel>", lambda e: self.tree_xpv.yview_scroll(int(-1 * (e.delta / 120) * 2), "units"))
-        
-        self.tree_xpv.grid(row=0, column=0, sticky='nsew')
-        vsb_xpv.grid(row=0, column=1, sticky='ns')
-        self.frame_xpv.grid_rowconfigure(0, weight=1)
-        self.frame_xpv.grid_columnconfigure(0, weight=1)
-        
-        # 为Iwara标签页创建列表
-        self.tree_iwara = tb.Treeview(self.frame_iwara, columns=("author"), show='headings', height=15)
-        self.tree_iwara.heading("author", text="作者")
-        self.tree_iwara.column("author", stretch=True)
-        
-        vsb_iwara = tb.Scrollbar(self.frame_iwara, orient="vertical", command=self.tree_iwara.yview)
-        self.tree_iwara.configure(yscrollcommand=vsb_iwara.set)
-        self.tree_iwara.bind("<MouseWheel>", lambda e: self.tree_iwara.yview_scroll(int(-1 * (e.delta / 120) * 2), "units"))
-        
-        self.tree_iwara.grid(row=0, column=0, sticky='nsew')
-        vsb_iwara.grid(row=0, column=1, sticky='ns')
-        self.frame_iwara.grid_rowconfigure(0, weight=1)
-        self.frame_iwara.grid_columnconfigure(0, weight=1)
-
-        
-        # 为Hanime1标签页创建列表
-        self.tree_hanime1 = tb.Treeview(self.frame_hanime1, columns=("author"), show='headings', height=15)
-        self.tree_hanime1.heading("author", text="作者")
-        self.tree_hanime1.column("author", stretch=True)
-        
-        vsb_hanime1 = tb.Scrollbar(self.frame_hanime1, orient="vertical", command=self.tree_hanime1.yview)
-        self.tree_hanime1.configure(yscrollcommand=vsb_hanime1.set)
-        self.tree_hanime1.bind("<MouseWheel>", lambda e: self.tree_hanime1.yview_scroll(int(-1 * (e.delta / 120) * 2), "units"))
-        
-        self.tree_hanime1.grid(row=0, column=0, sticky='nsew')
-        vsb_hanime1.grid(row=0, column=1, sticky='ns')
-        self.frame_hanime1.grid_rowconfigure(0, weight=1)
-        self.frame_hanime1.grid_columnconfigure(0, weight=1)
-        
-        # 填充数据
-        for author in self.favor_data.get("xpv", []):
-            self.tree_xpv.insert("", "end", values=(author,))
-        
-        for author in self.favor_data.get("iwara", []):
-            self.tree_iwara.insert("", "end", values=(author,))
-        
-        for author in self.favor_data.get("hanime1", []):
-            self.tree_hanime1.insert("", "end", values=(author,))
-        
-        # 绑定双击事件和标签页切换事件
-        self.tree_xpv.bind("<Double-1>", self.on_select)
-        self.tree_iwara.bind("<Double-1>", self.on_select)
-        self.tree_hanime1.bind("<Double-1>", self.on_select)
+        # 绑定标签页切换事件
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_change)
 
     def on_tab_change(self, event: Optional[tk.Event] = None) -> None:
         """Handles tab change event to update current channel."""
         selected_tab = self.notebook.select()
-        if selected_tab == self.frame_xpv._w:  # pyright: ignore[reportAttributeAccessIssue]
-            self.current_channel = "xpv"
-        elif selected_tab == self.frame_iwara._w:  # pyright: ignore[reportAttributeAccessIssue]
-            self.current_channel = "iwara"
-        elif selected_tab == self.frame_hanime1._w:  # pyright: ignore[reportAttributeAccessIssue]
-            self.current_channel = "hanime1"
+        # 遍历所有频道，查找对应的frame
+        for channel, frame in self.frames.items():
+            if selected_tab == frame._w:  # pyright: ignore[reportAttributeAccessIssue]
+                self.current_channel = channel
+                break
     
     def on_select(self, event: Optional[tk.Event] = None) -> None:
         """Handles author selection and closes the window."""
-        # 根据当前选中的标签页确定使用哪个tree
-        if self.current_channel == "xpv":
-            current_tree = self.tree_xpv
-        elif self.current_channel == "iwara":
-            current_tree = self.tree_iwara
-        elif self.current_channel == "hanime1":
-            current_tree = self.tree_hanime1
-        else:
+        # 根据当前渠道获取对应的tree
+        current_tree = self.trees.get(self.current_channel)
+        if not current_tree:
             self.master.after(0, lambda: Messagebox.show_error("未知渠道", "错误", parent=self))
             return
         
@@ -557,13 +552,8 @@ class Window_Favor(tb.Toplevel):
         self.destroy()
         if isinstance(self.master, Win_Main):
             # 根据当前渠道设置搜索源
-            if self.current_channel == "xpv":
-                self.master.combobox_source.set("Xpv")
-            elif self.current_channel == "iwara":
-                self.master.combobox_source.set("Iwara")
-            elif self.current_channel == "hanime1":
-                self.master.combobox_source.set("Hanime1")
-                
+            self.master.combobox_source.set(self.current_channel.capitalize())
+            
             self.master.entry_search.delete(0, tk.END)
             self.master.entry_search.insert(0, self.selection)
             self.master.selected_author = self.selection
@@ -577,89 +567,59 @@ class Window_Favor(tb.Toplevel):
         Window_Edit.title("编辑收藏夹")
         Window_Edit.geometry("600x700")
 
-        def save_favor(xpv_authors: list[str], iwara_authors: list[str], hanime1_authors: list[str]) -> None:
-            """Saves the favor list for both channels."""
-            # 去重并去除空字符串
-            unique_xpv_authors = list(dict.fromkeys([a.strip() for a in xpv_authors if a.strip()]))
-            unique_iwara_authors = list(dict.fromkeys([a.strip() for a in iwara_authors if a.strip()]))
-            unique_hanime1_authors = list(dict.fromkeys([a.strip() for a in hanime1_authors if a.strip()]))
+        def save_favor(authors_dict: dict[str, list[str]]) -> None:
+            """Saves the favor list for all channels."""
+            # 处理每个频道的作者列表
+            for channel, authors in authors_dict.items():
+                # 去重并去除空字符串
+                unique_authors = list(dict.fromkeys([a.strip() for a in authors if a.strip()]))
+                # 按名字首字母正序排序
+                unique_authors.sort(key=lambda x: x.lower())
+                self.favor_data[channel] = unique_authors
             
-            # 按名字首字母正序排序
-            unique_xpv_authors.sort(key=lambda x: x.lower())
-            unique_iwara_authors.sort(key=lambda x: x.lower())
-            unique_hanime1_authors.sort(key=lambda x: x.lower())
-            
-            sm.settings["Favor"] = {
-                "xpv": unique_xpv_authors,
-                "iwara": unique_iwara_authors,
-                "hanime1": unique_hanime1_authors
-            }
+            # 保存到设置
+            sm.settings["Favor"] = self.favor_data
             sm.save_settings()
-            self.favor_data = sm.settings.get("Favor", {"xpv": [], "iwara": [], "hanime1": []})
             
-            # 更新两个列表
-            self.tree_xpv.delete(*self.tree_xpv.get_children())
-            for author in self.favor_data.get("xpv", []):
-                self.tree_xpv.insert("", "end", values=(author,))
+            # 更新所有列表
+            for channel, tree in self.trees.items():
+                tree.delete(*tree.get_children())
+                for author in self.favor_data.get(channel, []):
+                    tree.insert("", "end", values=(author,))
                 
-            self.tree_iwara.delete(*self.tree_iwara.get_children())
-            for author in self.favor_data.get("iwara", []):
-                self.tree_iwara.insert("", "end", values=(author,))
-                
-            self.tree_hanime1.delete(*self.tree_hanime1.get_children())
-            for author in self.favor_data.get("hanime1", []):
-                self.tree_hanime1.insert("", "end", values=(author,))
-                
-            logger.info(f"保存 Xpv: {len(unique_xpv_authors)} 个, Iwara: {len(unique_iwara_authors)} 个, Hanime1: {len(unique_hanime1_authors)} 个收藏夹作者")
+            logger.info(f"保存了 {len(self.channels)} 个频道的收藏夹作者")
 
         # 创建Notebook用于编辑不同渠道的收藏列表
         notebook_edit = tb.Notebook(Window_Edit)
         notebook_edit.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
         
-        # 创建Xpv标签页
-        frame_xpv_edit = tb.Frame(notebook_edit)
-        notebook_edit.add(frame_xpv_edit, text="Xpv")
-        
-        # 创建Iwara标签页
-        frame_iwara_edit = tb.Frame(notebook_edit)
-        notebook_edit.add(frame_iwara_edit, text="Iwara")
-        
-        # 创建Hanime1标签页
-        frame_hanime1_edit = tb.Frame(notebook_edit)
-        notebook_edit.add(frame_hanime1_edit, text="Hanime1")
-        
-        # 为Xpv标签页创建编辑区域
-        tb.Label(frame_xpv_edit, text="每行一个作者名:").pack(anchor=tk.W, pady=(10, 0))
-        text_input_xpv = tb.Text(frame_xpv_edit, wrap=tk.WORD)
-        text_input_xpv.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
-        for author in self.favor_data.get("xpv", []):
-            text_input_xpv.insert(tk.END, author + "\n")
-        
-        # 为Iwara标签页创建编辑区域
-        tb.Label(frame_iwara_edit, text="每行一个作者名:").pack(anchor=tk.W, pady=(10, 0))
-        text_input_iwara = tb.Text(frame_iwara_edit, wrap=tk.WORD)
-        text_input_iwara.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
-        for author in self.favor_data.get("iwara", []):
-            text_input_iwara.insert(tk.END, author + "\n")
+        # 动态创建编辑区域
+        text_inputs: dict[str, tb.Text] = {}
+        for channel in self.channels:
+            # 创建标签页
+            frame_edit = tb.Frame(notebook_edit)
+            notebook_edit.add(frame_edit, text=channel.capitalize())
             
-        # 为Hanime1标签页创建编辑区域
-        tb.Label(frame_hanime1_edit, text="每行一个作者名:").pack(anchor=tk.W, pady=(10, 0))
-        text_input_hanime1 = tb.Text(frame_hanime1_edit, wrap=tk.WORD)
-        text_input_hanime1.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
-        for author in self.favor_data.get("hanime1", []):
-            text_input_hanime1.insert(tk.END, author + "\n")
+            # 创建编辑区域
+            tb.Label(frame_edit, text="每行一个作者名:").pack(anchor=tk.W, pady=(10, 0))
+            text_input = tb.Text(frame_edit, wrap=tk.WORD)
+            text_input.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
+            # 填充现有数据
+            for author in self.favor_data.get(channel, []):
+                text_input.insert(tk.END, author + "\n")
+            text_inputs[channel] = text_input
 
         frame_toolbars = tb.Frame(Window_Edit)
         frame_toolbars.pack(fill=tk.X, pady=5, padx=5)
-        tb.Button(frame_toolbars, text="保存", command=lambda: [
-            logger.info("保存收藏夹"),
-            save_favor(
-                text_input_xpv.get("1.0", tk.END).strip().splitlines(),
-                text_input_iwara.get("1.0", tk.END).strip().splitlines(),
-                text_input_hanime1.get("1.0", tk.END).strip().splitlines()
-            ),
+        
+        def on_save():
+            logger.info("保存收藏夹")
+            # 收集所有频道的作者数据
+            authors_dict = {channel: text_input.get("1.0", tk.END).strip().splitlines() for channel, text_input in text_inputs.items()}
+            save_favor(authors_dict)
             Window_Edit.destroy()
-        ]).pack(side='left', padx=5)
+        
+        tb.Button(frame_toolbars, text="保存", command=on_save).pack(side='left', padx=5)
         tb.Button(frame_toolbars, text="取消", command=Window_Edit.destroy).pack(side='left', padx=5)
 
 class Win_Main(tb.Window):
@@ -749,8 +709,12 @@ class Win_Main(tb.Window):
         tb.Label(frame_search, text="搜索:").pack(side='left')
         self.entry_search = tb.Entry(frame_search, width=40)
         self.entry_search.pack(side='left', padx=5)
-        self.combobox_source = tb.Combobox(frame_search, values=["Iwara", "Xpv", "Hanime1"], width=10)
-        self.combobox_source.set("Xpv")
+        # 获取所有已注册频道，首字母大写显示
+        channel_list = [channel.capitalize() for channel in channel_manager.list_channels()]
+        self.combobox_source = tb.Combobox(frame_search, values=channel_list, width=10)
+        # 默认选择第一个频道或 "Xpv"（如果存在）
+        default_channel = "Xpv" if "Xpv" in channel_list else channel_list[0] if channel_list else ""
+        self.combobox_source.set(default_channel)
         self.combobox_source.pack(side='left', padx=5)
         self.btn_search = tb.Button(frame_search, text="搜索", command=self.start_search)
         self.btn_search.pack(side='left', padx=5)
@@ -1024,12 +988,12 @@ class Win_Main(tb.Window):
         """一键检查更新功能"""
         logger.info("开始一键检查更新")
         
-        # 获取收藏夹中的xpv作者列表
+        # 获取收藏夹中的hanime1作者列表
         favor_data: dict[str, list[str]] = sm.settings.get("Favor", {})
-        xpv_authors = favor_data.get("xpv", [])
+        hanime1_authors = favor_data.get("hanime1", [])
         
-        if not xpv_authors:
-            Messagebox.show_info("收藏夹中没有Xpv作者", "提示", parent=self)
+        if not hanime1_authors:
+            Messagebox.show_info("收藏夹中没有Hanime1作者", "提示", parent=self)
             return
         
         # 禁用主窗口的某些功能
@@ -1038,26 +1002,25 @@ class Win_Main(tb.Window):
         self.btn_search.config(state=tk.DISABLED)
         
         # 在后台线程中执行检查更新
-        threading.Thread(target=self._check_updates_thread, args=(xpv_authors,), daemon=True).start()
+        threading.Thread(target=self._check_updates_thread, args=(hanime1_authors,), daemon=True).start()
 
-    def _check_updates_thread(self, xpv_authors: list[str]) -> None:
+    def _check_updates_thread(self, hanime1_authors: list[str]) -> None:
         """检查更新的后台线程"""
-        new_videos = []
+        new_videos: list[stru_hanime1_video] = []
         
         try:
             # 使用单个线程依次访问每个作者
-            for author in xpv_authors:
+            for author in hanime1_authors:
                 logger.info(f"检查作者 {author} 的更新")
                 # 获取该作者的所有视频
-                videos = Search_Engine.xpv_search_video(author)
+                videos = Search_Engine.hanime1_search_video(author)
                 
                 if videos:
                     # 从最新的视频开始检索，直到找到已经下载过的视频
                     index: int = 0
                     for video in videos:
                         # 检查视频是否已下载
-                        video_path = os.path.join(video.dpath, video.title + ".mp4")
-                        if os.path.isfile(video_path):
+                        if any([video.title in t for t in os.listdir(video.dpath)]):
                             logger.info(f"找到已下载的视频: {video.title}，停止检索该作者")
                             break
                         index += 1
@@ -1080,6 +1043,10 @@ class Win_Main(tb.Window):
             self.after(0, lambda: self.btn_edge.config(state=tk.NORMAL))
             self.after(0, lambda: self.btn_search.config(state=tk.NORMAL))
             
+            # 更新视频日期
+            for video in new_videos:
+                video._update_updatedAt_from_url()
+
             # 显示结果
             if new_videos:
                 logger.info(f"找到 {len(new_videos)} 个未下载的新视频")
@@ -1099,7 +1066,7 @@ class Win_Main(tb.Window):
             
             # 更新Hanime1视频的UpdateAt属性
             for video in videos:
-                video.update_updatedAt()
+                video._update_updatedAt_from_url()
                 logger.info(f"更新视频 {video.title} 的UpdateAt属性为 {video.updatedAt}")
                 self.after(0, self.update_tree)
             

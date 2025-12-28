@@ -48,10 +48,10 @@ class stru_iw_video:
         self.source: str = "Iwara"
         self.url: str = self.get_video_path_url()
         self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
+        self.updatedAt: str = data.get("updatedAt", "").strip()
         self.savetitle: str = "".join([f"[{datetime.datetime.fromisoformat(self.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")}]", data.get("title", "").strip()])
         self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
         self.author: str = self.user.username
-        self.updatedAt: str = data.get("updatedAt", "").strip()
         self.numViews: int = data.get("numViews", 0)
         self.dpath: str = sm.settings.get("Iwara_Download_Path", DEFAULT_SETTINGS["Iwara_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
@@ -63,6 +63,18 @@ class stru_iw_video:
     
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
+    
+    def get_updatedAt_timestamp(self) -> float:
+        """将YYYY-MM-DD格式的日期转换为时间戳"""
+        try:
+            if self.updatedAt:
+                return datetime.datetime.strptime(self.updatedAt, "%Y-%m-%d").timestamp()
+            else:
+                # 如果没有日期，返回一个较早的时间戳
+                return 0.0
+        except ValueError:
+            # 如果日期格式不正确，返回一个较早的时间戳
+            return 0.0
 
 class stru_xpv_video:
     def __init__(self, data: dict):
@@ -71,11 +83,11 @@ class stru_xpv_video:
         self.source: str = "Xpv"
         self.url: str = f"{sm.settings['Xpv_Hostname']}{data.get('url', '')}"
         self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
+        self.updatedAt: str = data.get("updatedAt", "").strip()
+        self.updatedAt = datetime.datetime.fromisoformat(self.updatedAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")
         self.savetitle: str = "".join([f"[{self.updatedAt}]", data.get("title", "").strip()])
         self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
         self.author: str = data.get("author", "").strip()
-        self.updatedAt: str = data.get("updatedAt", "").strip()
-        self.updatedAt = datetime.datetime.fromisoformat(self.updatedAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")
         self.numViews: int = data.get("numViews", 0)
         self.dpath: str = sm.settings.get("Xpv_Download_Path", DEFAULT_SETTINGS["Xpv_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
@@ -113,68 +125,126 @@ class stru_hanime1_video:
         self.url: str = data.get("url", "").strip()
         self.title: str = data.get("title", "").strip()
         self.title = re.sub(r'[\\/*?:"<>|]', "_", self.title)
+        self.updatedAt: str = data.get("updatedAt", "").strip()  # 一般没有
         self.savetitle: str = self.title
         self.author: str = data.get("author", "").strip()
-        self.updatedAt: str = data.get("updatedAt", "").strip()  # 一般没有
         self.numViews: int = data.get("numViews", 0)
         self.dpath: str = sm.settings.get("Hanime1_Download_Path", DEFAULT_SETTINGS["Hanime1_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
         os.makedirs(self.dpath, exist_ok=True)
 
-        self.get_updatedAt_from_file()
+        self._update_updatedAt_from_file()
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
     
-    def get_updatedAt_from_file(self) -> None:
-        # 如果存在本地文件 则日期为本地文件名中字符串规则符合YYYY-MM-DD的部分
-        for file in os.listdir(self.dpath):
-            if file.endswith(".mp4") and self.title in file:
-                save_path = os.path.join(self.dpath, file)
-                logger.debug(f"找到本地文件: {save_path}")
-                break
-        else:
-            save_path = os.path.join(self.dpath, f"{self.title}.mp4")
-        
-        if os.path.exists(save_path):
-            temp = re.search(r"\d{4}-\d{2}-\d{2}", os.path.basename(save_path))
-            if temp: self.updatedAt = temp.group()
-            else: self.updatedAt = ""
-        
-        self.update_savetitle(self.updatedAt)
+    def _extract_date_from_filename(self, filename: str) -> str:
+        """从文件名中提取YYYY-MM-DD格式的日期"""
+        match = re.search(r"\d{4}-\d{2}-\d{2}", filename)
+        return match.group() if match else ""
     
-    def update_savetitle(self, updatedAt: str):
+    def _find_local_video_file(self) -> str:
+        """查找本地视频文件，返回文件路径，如果不存在返回空字符串"""
+        # 首先尝试查找带日期前缀的文件
+        matching_files = [os.path.join(self.dpath, t) for t in os.listdir(self.dpath) if self.title in t]
+        
+        if matching_files:
+            return matching_files[0]  # 返回第一个匹配的文件
+
+        return ""  # 未找到匹配的文件
+    
+    def _update_savetitle(self, updatedAt: str) -> None:
+        """更新savetitle，仅当提供了有效日期时"""
         if not updatedAt:
             return
-        self.updatedAt = updatedAt
-        self.savetitle = "".join([f"[{self.updatedAt}]", self.title])
-        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
 
-        # 更新旧标题
-        save_path = os.path.join(self.dpath, f"{self.title}.mp4")
-        if os.path.exists(save_path):
-            os.rename(save_path, os.path.join(self.dpath, f"{self.savetitle}.mp4"))
+        self.updatedAt = updatedAt
+        self.savetitle = f"[{updatedAt}]{self.title}"
+        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
     
-    def update_updatedAt(self) -> None:
-        if self.updatedAt:
+    def _rename_video_file(self) -> None:
+        """重命名视频文件，支持多种旧文件名格式"""
+        if not self.updatedAt:
             return
         
+        # 查找所有可能的旧文件
+        old_patterns = [
+            f"{self.title}.mp4",
+            f"*{self.title}*.mp4"
+        ]
+        
+        import glob
+        for pattern in old_patterns:
+            old_files = glob.glob(os.path.join(self.dpath, pattern))
+            for old_path in old_files:
+                # 跳过已经是目标文件名的文件
+                if os.path.basename(old_path) == f"{self.savetitle}.mp4":
+                    continue
+                
+                new_path = os.path.join(self.dpath, f"{self.savetitle}.mp4")
+                try:
+                    os.rename(old_path, new_path)
+                    logger.debug(f"重命名文件: {old_path} -> {new_path}")
+                    break  # 重命名成功，退出循环
+                except Exception as e:
+                    logger.error(f"重命名文件失败 {old_path} -> {new_path}: {e}")
+    
+    def _update_updatedAt_from_file(self) -> bool:
+        """从本地文件中更新updatedAt，成功返回True，否则返回False"""
+        video_path = self._find_local_video_file()
+        if not video_path:
+            return False
+        
+        filename = os.path.basename(video_path)
+        date = self._extract_date_from_filename(filename)
+        if date:
+            self._update_savetitle(date)
+            self._rename_video_file()
+            return True
+        
+        return False
+    
+    def _update_updatedAt_from_url(self) -> bool:
+        """从URL中更新updatedAt，成功返回True，否则返回False"""
+        if self.updatedAt:
+            return True
+        
         try:
-            # 访问一下视频页面 获取视频信息
+            # 访问视频页面获取视频信息
             response = scraper.get(
                 url=self.url,
                 timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
             )
             response.raise_for_status()
+            
             # 解析视频信息
             soup = BeautifulSoup(response.text, "html.parser")
             div_info = soup.find("div", class_="video-details-wrapper hidden-sm hidden-md hidden-lg hidden-xl")
             if not div_info:
                 logger.error(f"无法解析视频信息: {self.url}")
-                return
-            temp = re.search(r"\d{4}-\d{2}-\d{2}", div_info.text)
-            if temp: self.update_savetitle(temp.group())
-
+                return False
+            
+            date = self._extract_date_from_filename(div_info.text)
+            if date:
+                self._update_savetitle(date)
+                self._rename_video_file()
+                return True
+            
         except Exception as e:
             logger.error(f"访问视频页面失败 {self.url}: {e}")
+        
+        return False
+    
+    def get_updatedAt_timestamp(self) -> float:
+        """将YYYY-MM-DD格式的日期转换为时间戳"""
+        try:
+            if self.updatedAt:
+                return datetime.datetime.strptime(self.updatedAt, "%Y-%m-%d").timestamp()
+            else:
+                # 如果没有日期，返回一个较早的时间戳
+                return 0.0
+        except ValueError:
+            # 如果日期格式不正确，返回一个较早的时间戳
+            return 0.0
+    
