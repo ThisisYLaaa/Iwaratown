@@ -4,7 +4,6 @@
 /__pycache__
 /backup
 
-iwtn_settings_1.0.1.json
-iwtn_cache_1.0.1.json
+*.json
 
 带日期的标题转换成不带日期的标题.py
