@@ -764,12 +764,6 @@ class Win_Main(tb.Window):
         # 插入新项
         for video in self.video_list:
             video_path: str = os.path.join(video.dpath, video.savetitle + ".mp4")
-            # 如果视频的某个属性为空 则从缓存中读取
-            if not all([value for value in video.__dict__.values()]):  # 如果视频存在空属性
-                cache: dict = cm.get_cache(video.source)[video.url]  # 从缓存中获取视频信息
-                for key, value in cache.items():
-                    if value and not getattr(video, key):  # 如果缓存值不为空 且 视频属性为空
-                        setattr(video, key, value)
 
             self.tree.insert('', 'end', values=(
                 video.updatedAt, 
@@ -933,7 +927,6 @@ class Win_Main(tb.Window):
                 self.after(0, lambda: self.btn_edge.configure(state=tk.NORMAL))
             self.after(0, lambda: self.btn_local.configure(state=tk.NORMAL))
 
-            self.dumpfunction_update_old_title_video()
             if self.video_list:
                 self.after(0, self.update_tree)
 

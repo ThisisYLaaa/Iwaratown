@@ -1,6 +1,8 @@
 from typing import Callable, Dict, List, Any, Optional
 import logging
+import os
 
+from Custom_Struc import *
 from Settings_Manager import sm, cm
 from Logger import get_logger
 logger: logging.Logger = get_logger("渠道管理")
@@ -125,7 +127,7 @@ class ChannelManager:
         """
         return list(self.channels.keys())
     
-    def download(self, task: Any) -> bool:
+    def download(self, task: stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video) -> bool:
         """下载任务，自动选择合适的渠道
         
         Args:
@@ -138,6 +140,7 @@ class ChannelManager:
         if hasattr(task, 'source'):
             channel = self.get_channel(task.source)
             if channel:
+                if task.dpath: os.makedirs(task.dpath, exist_ok=True)
                 return channel.download(task)
         
         # 对于没有source属性的任务，尝试匹配所有渠道

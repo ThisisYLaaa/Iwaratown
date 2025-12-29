@@ -56,8 +56,6 @@ class stru_iw_video:
         self.dpath: str = sm.settings.get("Iwara_Download_Path", DEFAULT_SETTINGS["Iwara_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
-        os.makedirs(self.dpath, exist_ok=True)
-
     def get_video_path_url(self) -> str:
         return f"https://www.iwara.tv/video/{self.id}"
     
@@ -92,8 +90,6 @@ class stru_xpv_video:
         self.dpath: str = sm.settings.get("Xpv_Download_Path", DEFAULT_SETTINGS["Xpv_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
-        os.makedirs(self.dpath, exist_ok=True)
-
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
     
@@ -106,6 +102,7 @@ class stru_xpv_custom:
         self.url: str = data.get('url', '')
         self.type: str = self.get_type()
         self.source: str = "Xpv"  # 添加source属性，确保渠道管理器能识别
+        self.dpath: str = ""  # 不需要
     
     def get_type(self) -> str:
         """video: 社区帖子; pic: 图片"""
@@ -125,16 +122,23 @@ class stru_hanime1_video:
         self.url: str = data.get("url", "").strip()
         self.title: str = data.get("title", "").strip()
         self.title = re.sub(r'[\\/*?:"<>|]', "_", self.title)
-        self.updatedAt: str = data.get("updatedAt", "").strip()  # 一般没有
-        self.savetitle: str = self.title
+        self.updatedAt: str = ""  # 一般没有
+        self.savetitle: str = ""  # 一般没有
         self.author: str = data.get("author", "").strip()
         self.numViews: int = data.get("numViews", 0)
         self.dpath: str = sm.settings.get("Hanime1_Download_Path", DEFAULT_SETTINGS["Hanime1_Download_Path"])
         self.dpath = os.path.join(self.dpath, self.author)
 
-        os.makedirs(self.dpath, exist_ok=True)
+        # 如果视频的某个属性为空 则从缓存中读取
+        if not all([value for value in self.__dict__.values()]):  # 如果视频存在空属性
+            cache: dict = cm.get_cache(self.source)[self.url]  # 从缓存中获取视频信息
+            for key, value in cache.items():
+                if value and not getattr(self, key):  # 如果缓存值不为空 且 视频属性为空
+                    setattr(self, key, value)
 
+        # 如果缓存没有, 则从文件名中提取日期
         self._update_updatedAt_from_file()
+        self._rename_video_file()
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.__dict__.get(key, default)
@@ -146,6 +150,9 @@ class stru_hanime1_video:
     
     def _find_local_video_file(self) -> str:
         """查找本地视频文件，返回文件路径，如果不存在返回空字符串"""
+        if not os.path.exists(self.dpath):
+            return ""
+
         # 首先尝试查找带日期前缀的文件
         matching_files = [os.path.join(self.dpath, t) for t in os.listdir(self.dpath) if self.title in t]
         
@@ -168,27 +175,18 @@ class stru_hanime1_video:
         if not self.updatedAt:
             return
         
-        # 查找所有可能的旧文件
-        old_patterns = [
-            f"{self.title}.mp4",
-            f"*{self.title}*.mp4"
-        ]
+        if not os.path.exists(self.dpath):
+            return
         
-        import glob
-        for pattern in old_patterns:
-            old_files = glob.glob(os.path.join(self.dpath, pattern))
-            for old_path in old_files:
-                # 跳过已经是目标文件名的文件
-                if os.path.basename(old_path) == f"{self.savetitle}.mp4":
-                    continue
-                
-                new_path = os.path.join(self.dpath, f"{self.savetitle}.mp4")
-                try:
-                    os.rename(old_path, new_path)
-                    logger.debug(f"重命名文件: {old_path} -> {new_path}")
-                    break  # 重命名成功，退出循环
-                except Exception as e:
-                    logger.error(f"重命名文件失败 {old_path} -> {new_path}: {e}")
+        old_path = os.path.join(self.dpath, f"{self.title}.mp4")
+        new_path = os.path.join(self.dpath, f"{self.savetitle}.mp4")
+        if os.path.exists(new_path) or not os.path.exists(old_path):
+            return
+        try:
+            os.rename(old_path, new_path)
+            logger.debug(f"重命名文件: {old_path} -> {new_path}")
+        except Exception as e:
+            logger.error(f"重命名文件失败 {old_path} -> {new_path}: {e}")
     
     def _update_updatedAt_from_file(self) -> bool:
         """从本地文件中更新updatedAt，成功返回True，否则返回False"""
@@ -200,7 +198,6 @@ class stru_hanime1_video:
         date = self._extract_date_from_filename(filename)
         if date:
             self._update_savetitle(date)
-            self._rename_video_file()
             return True
         
         return False
