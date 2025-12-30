@@ -20,8 +20,12 @@
    - 包含 Git 提交哈希、作者、日期和提交信息
    - 格式：`- <哈希> <作者> <日期> <提交信息>`
 
+## 2025-12-30
+- 7f3ab68 LeakedYilo 2025-12-30 [frontline] refactor(Channel): 优化下载任务处理逻辑并统一目录创建
+
 ## 2025-12-29
 - 8942182 LeakedYilo 2025-12-29 [frontline] refactor(视频结构): 重构视频日期处理逻辑并优化UI动态生成
+- ebccc8e LeakedYilo 2025-12-29 [frontline] feat(日志管理): 添加自动更新日志脚本并优化.gitignore规则
 
 ## 2025-12-28
 - 9482d2e LeakedYilo 2025-12-28 [frontline] docs: 添加频道开发指南文档并优化结构体注释

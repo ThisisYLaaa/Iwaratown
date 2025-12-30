@@ -131,7 +131,7 @@ class stru_hanime1_video:
 
         # 如果视频的某个属性为空 则从缓存中读取
         if not all([value for value in self.__dict__.values()]):  # 如果视频存在空属性
-            cache: dict = cm.get_cache(self.source)[self.url]  # 从缓存中获取视频信息
+            cache: dict = cm.get_cache(self.source).get(self.url, {})  # 从缓存中获取视频信息
             for key, value in cache.items():
                 if value and not getattr(self, key):  # 如果缓存值不为空 且 视频属性为空
                     setattr(self, key, value)
