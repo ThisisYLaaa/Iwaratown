@@ -1,9 +1,9 @@
-from CScraper import scraper
+from utils.CScraper import scraper
 from requests.auth import AuthBase
 import json
 
-from Custom_Struc import sm
-from Init_Settings import DEFAULT_SETTINGS
+from config.Settings_Manager import sm
+from config.Init_Settings import DEFAULT_SETTINGS
 
 api_url = sm.settings.get("Iwara_API_Hostname", DEFAULT_SETTINGS["Iwara_API_Hostname"])
 

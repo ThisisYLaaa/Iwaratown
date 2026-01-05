@@ -12,14 +12,14 @@ import cloudscraper
 from bs4 import BeautifulSoup
 import yt_dlp
 
-from Custom_Struc import *
-from DownloadProgressTracker import DownloadProgressTracker
-from Init_Settings import *
-from Iwara_Login import il
-from Logger import get_logger
+from core.Custom_Struc import *
+from core.DownloadProgressTracker import DownloadProgressTracker
+from config.Init_Settings import *
+from core.Iwara_Login import il
+from utils.Logger import get_logger
 logger: logging.Logger = get_logger("下载")
-from Settings_Manager import sm, cm
-from CScraper import scraper
+from config.Settings_Manager import sm, cm
+from utils.CScraper import scraper
 
 class Download_Engine:
     @staticmethod

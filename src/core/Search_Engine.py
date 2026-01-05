@@ -13,14 +13,14 @@ import cloudscraper
 import requests
 from bs4 import BeautifulSoup
 
-from Custom_Struc import *
-from Init_Settings import *
-from Iwara_Login import il
-from Logger import get_logger
+from core.Custom_Struc import *
+from config.Init_Settings import *
+from core.Iwara_Login import il
+from utils.Logger import get_logger
 logger: logging.Logger = get_logger("搜索")
-from Settings_Manager import sm, cm
-from Channel import Channel, channel_manager
-from CScraper import scraper
+from config.Settings_Manager import sm, cm
+from core.Channel import Channel, channel_manager
+from utils.CScraper import scraper
 
 
 class Search_Engine:
@@ -281,7 +281,7 @@ class Search_Engine:
 # 注册搜索渠道到渠道管理器
 def register_search_channels():
     """注册搜索渠道到渠道管理器"""
-    from Download_Engine import Download_Engine
+    from .Download_Engine import Download_Engine
     
     # 注册Xpv渠道
     xpv_channel = Channel(

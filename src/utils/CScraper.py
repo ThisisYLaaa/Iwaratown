@@ -1,7 +1,7 @@
 import cloudscraper
 
 import logging
-from Logger import get_logger
+from .Logger import get_logger
 logger: logging.Logger = get_logger("CloudFlare爬虫")
 
 _CScraper_instance = None

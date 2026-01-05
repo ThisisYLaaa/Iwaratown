@@ -11,14 +11,14 @@ from ttkbootstrap.dialogs.dialogs import Messagebox
 from tkinter import filedialog as fd
 import tkinter as tk
 
-from Custom_Struc import *
-from Init_Settings import *
-from Iwara_Login import il
-from Logger import get_logger
+from core.Custom_Struc import *
+from config.Init_Settings import *
+from core.Iwara_Login import il
+from utils.Logger import get_logger
 logger: logging.Logger = get_logger("⭐Iwaratown⭐")
-from Search_Engine import Search_Engine
-from Settings_Manager import sm, cm
-from Channel import channel_manager
+from core.Search_Engine import Search_Engine
+from config.Settings_Manager import sm, cm
+from core.Channel import channel_manager
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""
@@ -1070,10 +1070,16 @@ class Win_Main(tb.Window):
         # 在后台线程中执行更新
         threading.Thread(target=th, daemon=True).start()
         
-if __name__ == "__main__":
+def main():
+    """
+    主程序入口函数
+    """
     try:
         app = Win_Main()
         app.mainloop()
     except Exception as e:
         logger.critical(f"程序因错误将会退出: {e}")
         input("按任意键继续...")
+
+if __name__ == "__main__":
+    main()

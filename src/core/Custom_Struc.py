@@ -2,13 +2,13 @@ import datetime, os, re
 from typing import Any
 from bs4 import BeautifulSoup
 
-from CScraper import scraper
+from utils.CScraper import scraper
 
-from Logger import get_logger
+from utils.Logger import get_logger
 logger = get_logger("视频")
 
-from Init_Settings import *
-from Settings_Manager import sm, cm
+from config.Init_Settings import *
+from config.Settings_Manager import sm, cm
 
 class stru_iw_author:
     def __init__(self, data: dict):

@@ -3,7 +3,7 @@ import logging
 from colorama import Fore, Back, Style
 import colorama
 
-from Init_Settings import *
+from config.Init_Settings import *
 
 # 初始化colorama
 colorama.init(autoreset=True)

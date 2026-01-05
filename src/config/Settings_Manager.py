@@ -1,9 +1,9 @@
 import json
 import logging
 
-from Custom_Struc import *
-from Init_Settings import *
-from Logger import get_logger
+from core.Custom_Struc import *
+from .Init_Settings import *
+from utils.Logger import get_logger
 
 logger: logging.Logger = get_logger("设置")
 

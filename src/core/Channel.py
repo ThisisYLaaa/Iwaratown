@@ -2,9 +2,9 @@ from typing import Callable, Dict, List, Any, Optional
 import logging
 import os
 
-from Custom_Struc import *
-from Settings_Manager import sm, cm
-from Logger import get_logger
+from core.Custom_Struc import *
+from config.Settings_Manager import sm, cm
+from utils.Logger import get_logger
 logger: logging.Logger = get_logger("渠道管理")
 
 class Channel:
