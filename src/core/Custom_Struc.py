@@ -116,7 +116,7 @@ class stru_xpv_custom:
 
 class stru_hanime1_video:
     def __init__(self, data: dict):
-        # 必须
+        # 频道必须
         self.furl: str = data.get("furl", "").strip()
         self.source: str = "Hanime1"
         self.url: str = data.get("url", "").strip()

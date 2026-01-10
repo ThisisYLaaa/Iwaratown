@@ -18,7 +18,7 @@ from utils.Logger import get_logger
 logger: logging.Logger = get_logger("⭐Iwaratown⭐")
 from core.Search_Engine import Search_Engine
 from config.Settings_Manager import sm, cm
-from core.Channel import channel_manager
+from core.Channel import channel_manager, Channel
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""
@@ -622,6 +622,79 @@ class Window_Favor(tb.Toplevel):
         tb.Button(frame_toolbars, text="保存", command=on_save).pack(side='left', padx=5)
         tb.Button(frame_toolbars, text="取消", command=Window_Edit.destroy).pack(side='left', padx=5)
 
+class Window_ShowNew(tb.Toplevel):
+    def __init__(self, parent: "Win_Main") -> None:
+        super().__init__()
+        self.parent: "Win_Main" = parent
+        self.title("最新的本地视频")
+        self.geometry("1280x720")
+
+        self.backup: list = []
+        self.update_backup()
+
+        self.create_widgets()
+        self.fill_tree()
+    
+    def create_widgets(self) -> None:
+        self.tree = tb.Treeview(self, columns=("#1", "#2", "#3", "#4"), show="headings")
+        self.tree.column("#1", width=60)
+        self.tree.column("#2", width=540)
+        self.tree.column("#3", width=50)
+        self.tree.column("#4", width=50)
+        self.tree.heading("#1", text="日期")
+        self.tree.heading("#2", text="标题")
+        self.tree.heading("#3", text="本地文件")
+        self.tree.heading("#4", text="链接")
+        self.tree.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
+
+        vsb = tb.Scrollbar(self, orient="vertical", command=self.tree.yview)
+        hsb = tb.Scrollbar(self, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        
+        self.tree.grid(row=0, column=0, sticky='nsew')
+        vsb.grid(row=0, column=1, sticky='ns')
+        hsb.grid(row=1, column=0, sticky='ew')
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        
+        self.tree.bind("<MouseWheel>", lambda e: self.tree.yview_scroll(int(-1 * (e.delta / 120) * 2), "units"))
+        self.tree.bind("<Double-Button-1>", self.on_tree_click)
+    
+    def on_tree_click(self, event: tk.Event) -> None:
+        item = self.tree.selection()[0]
+        col = self.tree.identify_column(event.x)
+        if col == "#4":
+            self.parent.open_edge_private(self.tree.item(item, "values")[3])
+        elif col == "#3":
+            dir = os.path.dirname(self.tree.item(item, "values")[2])
+            os.startfile(dir)
+    
+    def update_backup(self) -> None:
+        origin_cache: dict[str, dict[str, dict[str, Any]]] = cm.cache
+        channels: list[Channel] = list(channel_manager.channels.values())
+        for _, videos in origin_cache.items():
+            for video in videos.values():
+                # 首先检查文件是否存在
+                if not os.path.exists(video.get("dpath", "")):
+                    continue
+                f = os.listdir(video.get("dpath", ""))
+                if not any(video.get("savetitle", "") in file for file in f):
+                    continue
+                for channel in channels:
+                    if video.get("source", "") == channel.name:
+                        self.backup.append(channel.video_struc(video))
+        
+        # 按照时间顺序重新排列
+        self.backup.sort(key=lambda x: x.updatedAt, reverse=True)
+    
+    def fill_tree(self) -> None:
+        for video in self.backup:
+            self.tree.insert("", "end", values=(
+                video.get("updatedAt", ""), 
+                video.get("title", ""), 
+                os.path.join(video.get("dpath", ""), f"{video.get('savetitle', '')}.mp4"),
+                video.get("url", "")))
+
 class Win_Main(tb.Window):
     def __init__(self) -> None:
         super().__init__(themename=THEMENAME)
@@ -672,13 +745,13 @@ class Win_Main(tb.Window):
         frame_toolbar.pack(fill=tk.X, pady=5, padx=5)
         tb.Button(frame_toolbar, text="设置", command=lambda: [
             logger.debug("打开设置窗口"),
-            Window_Settings(self)
+            threading.Thread(target=Window_Settings, args=(self,), daemon=True).start()
         ]).pack(side='left', padx=5)
         self.btn_edge = tb.Button(frame_toolbar, text="Edge无痕浏览", state=tk.DISABLED, command= lambda: [self.open_edge_private(self.url_for_edge_to_open)])
         self.btn_edge.pack(side='left', padx=5)
         tb.Button(frame_toolbar, text="收藏夹", command=lambda: [
             logger.debug("打开收藏夹窗口"),
-            Window_Favor(self)
+            threading.Thread(target=Window_Favor, args=(self,), daemon=True).start()
         ]).pack(side='left', padx=5)
         # 登录按钮
         self.btn_login = tb.Button(frame_toolbar, text="登录", command=self.on_login_button_click)
@@ -703,7 +776,10 @@ class Win_Main(tb.Window):
         frame_toolbar2.pack(fill=tk.X, pady=5, padx=5)
         tb.Button(frame_toolbar2, text="一键检查更新", command=self.check_updates).pack(side='left', padx=5)
         tb.Button(frame_toolbar2, text="更新Hanime1日期", command=self.update_hanime1_UpdateAt).pack(side='left', padx=5)
-
+        tb.Button(frame_toolbar2, text="查看最新本地视频", command=lambda: [
+            logger.debug("打开最新本地视频窗口"),
+            threading.Thread(target=Window_ShowNew, args=(self,), daemon=True).start()
+        ]).pack(side='left', padx=5)
         frame_search = tb.Frame(self)
         frame_search.pack(padx=5, pady=5, anchor=tk.NW, fill=tk.X)
         tb.Label(frame_search, text="搜索:").pack(side='left')
@@ -844,8 +920,8 @@ class Win_Main(tb.Window):
                 Messagebox.show_info("已成功退出登录", "提示", parent=self)
         else:
             # 显示登录窗口
-            Window_Login(self)
-    
+            threading.Thread(target=Window_Login, args=(self,), daemon=True).start()
+
     def update_login_status(self, is_logged_in: bool) -> None:
         """更新登录按钮的显示状态"""
         if is_logged_in:
@@ -937,7 +1013,7 @@ class Win_Main(tb.Window):
         def author_selection_callback(author: str) -> None:
             self.selected_author = author
             event.set()
-        Window_AuthorSelection(self, authors, author_selection_callback)
+        threading.Thread(target=Window_AuthorSelection, args=(self, authors, author_selection_callback), daemon=True).start()
 
     def start_download(self) -> None:
         selected_items: tuple[str, ...] = self.tree.selection()
@@ -1043,7 +1119,7 @@ class Win_Main(tb.Window):
             # 显示结果
             if new_videos:
                 logger.info(f"找到 {len(new_videos)} 个未下载的新视频")
-                self.after(0, lambda: Window_CheckUpdate(self, new_videos))
+                self.after(0, lambda: threading.Thread(target=Window_CheckUpdate, args=(self, new_videos), daemon=True).start())
             else:
                 self.after(0, lambda: Messagebox.show_info("没有找到未下载的新视频", "提示", parent=self))
             
@@ -1080,6 +1156,3 @@ def main():
     except Exception as e:
         logger.critical(f"程序因错误将会退出: {e}")
         input("按任意键继续...")
-
-if __name__ == "__main__":
-    main()

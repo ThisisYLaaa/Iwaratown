@@ -18,7 +18,6 @@ DEFAULT_HEADERS: dict = {
     # Iwara不可以用Accept-Encoding
 }
 
-# 渠道配置 - 集中管理
 CHANNELS_CONFIG = {
     "Xpv": {
         "hostname_key": "Xpv_Hostname",

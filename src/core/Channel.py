@@ -11,7 +11,8 @@ class Channel:
     """单个渠道的封装类"""
     
     def __init__(self, name: str, hostname_key: str, download_path_key: str,
-                 search_method: Callable, download_methods: Dict[str, Callable]):
+                 search_method: Callable, download_methods: Dict[str, Callable],
+                 video_struc: type[stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video]):
         """初始化渠道
         
         Args:
@@ -20,12 +21,14 @@ class Channel:
             download_path_key: 设置中下载路径的键
             search_method: 搜索方法
             download_methods: 下载方法字典，键为任务类型，值为下载函数
+            video_struc: 视频结构体类型
         """
         self.name = name
         self.hostname_key = hostname_key
         self.download_path_key = download_path_key
         self.search_method = search_method
         self.download_methods = download_methods
+        self.video_struc = video_struc
     
     def can_handle(self, task: Any) -> bool:
         """判断该渠道是否能处理给定任务"""
@@ -67,9 +70,6 @@ class Channel:
         
         # 对于自定义URL任务，根据URL特征判断
         if hasattr(task, 'url'):
-            from Settings_Manager import Settings_Manager
-            from Init_Settings import DEFAULT_SETTINGS
-            sm = Settings_Manager()
             hostname = sm.settings.get(self.hostname_key, DEFAULT_SETTINGS[self.hostname_key])
             if hostname in task.url:
                 # 尝试使用自定义下载方法
@@ -176,4 +176,3 @@ class ChannelManager:
 
 # 创建全局渠道管理器实例
 channel_manager = ChannelManager()
-

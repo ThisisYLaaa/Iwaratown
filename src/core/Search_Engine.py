@@ -293,7 +293,8 @@ def register_search_channels():
             "default": Download_Engine.xpv_download_video,
             "pic": Download_Engine.xpv_download_comic_pic,
             "video": Download_Engine.xpv_download_community_video
-        }
+        },
+        video_struc=stru_xpv_video,
     )
     channel_manager.register_channel(xpv_channel)
     
@@ -312,7 +313,8 @@ def register_search_channels():
         search_method=iwara_search_wrapper,
         download_methods={
             "default": Download_Engine.iw_download_video
-        }
+        },
+        video_struc=stru_iw_video,
     )
     channel_manager.register_channel(iwara_channel)
     
@@ -324,7 +326,8 @@ def register_search_channels():
         search_method=Search_Engine.hanime1_search_video,
         download_methods={
             "default": Download_Engine.hanime1_download
-        }
+        },
+        video_struc=stru_hanime1_video,
     )
     channel_manager.register_channel(hanime1_channel)
     
