@@ -506,6 +506,7 @@ class Download_Engine:
         """下载Hanime1视频"""
         # 更新日期
         video._update_updatedAt_from_url()
+        download_link: str = ""
 
         try:
             # 检查目录是否存在
@@ -519,6 +520,9 @@ class Download_Engine:
                 logger.info(f"文件已存在，跳过下载: {video.savetitle}")
                 return True
             
+            # 获取下载链接
+            download_link = chrome_scraper.get_download_link(video.url)
+            
             # 下载视频 yt-dlp
             opts = {
                 "outtmpl": save_path,
@@ -526,10 +530,10 @@ class Download_Engine:
                 "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"]),
             }
             with yt_dlp.YoutubeDL(opts) as ydl:  # pyright: ignore[reportArgumentType]
-                ydl.download([video.url])
+                ydl.download([download_link])
                 
             logger.info(f"下载完成: {video.savetitle}")
             return True
         except Exception as e:
-            logger.error(f"下载视频失败 {video.url}: {e}")
+            logger.error(f"下载视频失败 {download_link}: {e}")
             return False

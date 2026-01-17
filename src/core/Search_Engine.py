@@ -237,7 +237,7 @@ class Search_Engine:
 
                 soup: BeautifulSoup = chrome_scraper.get(
                     url=get_url + "?" + urlencode(params),
-                    target_ele="#home-rows-wrapper", timeout=300
+                    target_ele="#home-rows-wrapper"
                 )
                 # 每个视频的div标签
                 current_video_list = soup.find_all("div", class_="video-item-container")
