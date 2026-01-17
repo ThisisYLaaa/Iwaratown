@@ -2,7 +2,7 @@ import datetime, os, re
 from typing import Any
 from bs4 import BeautifulSoup
 
-from utils.CScraper import scraper
+from utils.CScraper import chrome_scraper
 
 from utils.Logger import get_logger
 logger = get_logger("视频")
@@ -208,15 +208,11 @@ class stru_hanime1_video:
             return True
         
         try:
-            # 访问视频页面获取视频信息
-            response = scraper.get(
-                url=self.url,
-                timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
-            )
-            response.raise_for_status()
-            
             # 解析视频信息
-            soup = BeautifulSoup(response.text, "html.parser")
+            soup: BeautifulSoup = chrome_scraper.get(
+                url=self.url,
+                target_ele="main-nav-video-show hidden-xs"
+            )
             div_info = soup.find("div", class_="video-details-wrapper hidden-sm hidden-md hidden-lg hidden-xl")
             if not div_info:
                 logger.error(f"无法解析视频信息: {self.url}")

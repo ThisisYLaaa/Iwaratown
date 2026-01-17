@@ -19,7 +19,7 @@ from core.Iwara_Login import il
 from utils.Logger import get_logger
 logger: logging.Logger = get_logger("下载")
 from config.Settings_Manager import sm, cm
-from utils.CScraper import scraper
+from utils.CScraper import cloud_scraper
 
 class Download_Engine:
     @staticmethod
@@ -27,7 +27,7 @@ class Download_Engine:
         base_url: str = urljoin(video.url, "/").rstrip("/")
         try:
             logger.info(f"获取视频页面: {video.url}")
-            response = scraper.get(
+            response = cloud_scraper.get(
                 url=video.url,
                 timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
             )
@@ -115,7 +115,7 @@ class Download_Engine:
         base_url: str = urljoin(video_page_url, "/").rstrip("/")
         try:
             logger.info(f"获取视频页面: {video_page_url}")
-            response = scraper.get(
+            response = cloud_scraper.get(
                 url=video_page_url,
                 timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
             )
@@ -175,7 +175,7 @@ class Download_Engine:
             logger.info(f"开始下载视频: {safe_title}")
             
             # 发起请求获取视频内容
-            response = scraper.get(video_file_url, headers=headers, timeout=30, stream=True)
+            response = cloud_scraper.get(video_file_url, headers=headers, timeout=30, stream=True)
             response.raise_for_status()
             
             # 获取文件总大小
@@ -239,7 +239,7 @@ class Download_Engine:
             if headers:
                 logger.debug("已添加登录token到请求头")
             
-            response = scraper.get(
+            response = cloud_scraper.get(
                 url=api_url,
                 headers=headers,
                 timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
@@ -276,7 +276,7 @@ class Download_Engine:
             if resources_headers:
                 logger.debug("已添加登录token到资源请求头")
                 
-            resources_response = scraper.get(
+            resources_response = cloud_scraper.get(
                 url=url, 
                 headers=resources_headers,
                 timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
@@ -340,7 +340,7 @@ class Download_Engine:
             if download_headers:
                 logger.debug("已添加登录token到下载请求头")
                 
-            response = scraper.get(download_link, headers=download_headers, timeout=30, stream=True)
+            response = cloud_scraper.get(download_link, headers=download_headers, timeout=30, stream=True)
             response.raise_for_status()
             
             # 获取文件总大小
@@ -374,7 +374,7 @@ class Download_Engine:
         pic_file_urls: list = []
         try:
             logger.info(f"获取图片页面: {pic_page_url}")
-            response = scraper.get(
+            response = cloud_scraper.get(
                 url=pic_page_url,
                 timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
             )
@@ -434,7 +434,7 @@ class Download_Engine:
                     "referer": f"{sm.settings.get("Xpv_Hostname", DEFAULT_SETTINGS["Xpv_Hostname"])}/"
                 }
                 # 下载图片
-                response = scraper.get(
+                response = cloud_scraper.get(
                     url=url, headers=headers,
                     timeout=30, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
                 )

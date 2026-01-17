@@ -20,7 +20,7 @@ from utils.Logger import get_logger
 logger: logging.Logger = get_logger("搜索")
 from config.Settings_Manager import sm, cm
 from core.Channel import Channel, channel_manager
-from utils.CScraper import scraper
+from utils.CScraper import cloud_scraper, chrome_scraper
 
 
 class Search_Engine:
@@ -36,7 +36,7 @@ class Search_Engine:
             if headers:
                 logger.debug(f"添加认证token到请求头")
             
-            response = scraper.get(
+            response = cloud_scraper.get(
                 url=api_url,
                 headers=headers,
                 timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
@@ -80,7 +80,7 @@ class Search_Engine:
                 if headers:
                     logger.debug(f"添加认证token到请求头")
                 
-                response = scraper.get(
+                response = cloud_scraper.get(
                     url=api_url,
                     headers=headers,
                     timeout=30, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
@@ -141,7 +141,7 @@ class Search_Engine:
         try:
             logger.info(f"向Xpv发送视频搜索请求: {php_url}")
             logger.debug(f"post_data: {post_data}")
-            response = scraper.post(
+            response = cloud_scraper.post(
                 url=php_url, data=post_data,
                 timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
             )
@@ -162,7 +162,7 @@ class Search_Engine:
             for _ in range(MAX_PAGE):
                 logger.info(f"获取Xpv搜索结果页面 第{current_page}页: {redirect_url}")
                 target_url = urljoin(base_url, f"/e/search/result/index.php?page={current_page}&searchid={searchid}")
-                response = scraper.get(
+                response = cloud_scraper.get(
                     url=target_url,
                     timeout=7, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
                 )
@@ -228,35 +228,27 @@ class Search_Engine:
         try:
             video_list: list[stru_hanime1_video] = []
             
-            current_page: int = 0
+            current_page: int = 1
             current_video_list = []
             for _ in range(MAX_PAGE):
                 params["page"] = current_page
                 logger.info(f"获取Hanime1搜索结果页面 第{current_page}页: {get_url}")
                 logger.debug(f"params: {params}")
 
-                response = scraper.get(
-                    url=get_url, params=params,
-                    timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
+                soup: BeautifulSoup = chrome_scraper.get(
+                    url=get_url + "?" + urlencode(params),
+                    target_ele="#home-rows-wrapper", timeout=300
                 )
-                logger.debug(f"status_code: {response.status_code}")
-                response.raise_for_status()
-
-                soup: BeautifulSoup = BeautifulSoup(response.text, "html.parser")
                 # 每个视频的div标签
-                current_video_list = soup.find_all("div", class_="col-xs-6 col-sm-4 col-md-2 search-doujin-videos hidden-xs hover-lighter multiple-link-wrapper")
+                current_video_list = soup.find_all("div", class_="video-item-container")
                 if not current_video_list:
                     break
                 for div in current_video_list:
-                    # div标签下class为"card-mobile-user"的a标签的值为author
-                    a_tag = div.find("a", class_="card-mobile-user")
-                    if a_tag:
-                        author: str = str(a_tag.text.strip())
-                    else:
-                        author = "unknown"
-
                     # div标签本身有标题title, div下的a标签有视频链接href
                     title: str = str(div.get("title", ""))
+                    # 从title中提取author,如果没有则使用unknown
+                    author = re.search(r"\[(.*?)\]", title)
+                    author = author.group(1) if author else "unknown"
                     a_tag = div.find("a", href=True)
                     if a_tag:
                         href: str = str(a_tag["href"])
@@ -272,8 +264,6 @@ class Search_Engine:
             logger.info(f"成功获取 {len(video_list)} 个视频")
             return video_list
 
-        except cloudscraper.exceptions.CloudflareChallengeError as e:
-            logger.error(f"Hanime1搜索接口返回Cloudflare挑战错误: {e}")
         except Exception as e:
             logger.error(f"处理Hanime1搜索结果时发生未知错误: {e}")
         return []

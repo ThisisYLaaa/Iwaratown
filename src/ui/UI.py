@@ -1115,9 +1115,11 @@ class Win_Main(tb.Window):
             # 更新视频日期
             for video in new_videos:
                 video._update_updatedAt_from_url()
-
+                
             # 显示结果
             if new_videos:
+                logger.info(f"将 {len(new_videos)} 个视频加入到缓存中")
+                cm.set_cache("Hanime1", new_videos)
                 logger.info(f"找到 {len(new_videos)} 个未下载的新视频")
                 self.after(0, lambda: threading.Thread(target=Window_CheckUpdate, args=(self, new_videos), daemon=True).start())
             else:
