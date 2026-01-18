@@ -1,4 +1,5 @@
 from typing import Optional
+
 from colorama import Fore, Style
 import time
 

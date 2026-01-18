@@ -12,7 +12,7 @@ class Channel:
     
     def __init__(self, name: str, hostname_key: str, download_path_key: str,
                  search_method: Callable, download_methods: Dict[str, Callable],
-                 video_struc: type[stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video]):
+                 video_struc: type[stru_xpv_video|stru_xpv_custom|stru_hanime1_video]):
         """初始化渠道
         
         Args:
@@ -127,7 +127,7 @@ class ChannelManager:
         """
         return list(self.channels.keys())
     
-    def download(self, task: stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video) -> bool:
+    def download(self, task: stru_xpv_video|stru_xpv_custom|stru_hanime1_video) -> bool:
         """下载任务，自动选择合适的渠道
         
         Args:

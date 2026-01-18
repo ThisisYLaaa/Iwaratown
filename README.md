@@ -1,13 +1,13 @@
-# Iwaratown 项目目录结构说明
+# VideoDownloader 项目目录结构说明
 
 ## 1. 项目概述
 
-Iwaratown 是一个用于管理和下载网络视频内容的应用程序，支持多种视频平台的搜索和下载功能。
+VideoDownloader 是一个用于管理和下载网络视频内容的应用程序，支持多种视频平台的搜索和下载功能。
 
 ## 2. 目录结构
 
 ```
-Iwaratown/
+VideoDownloader/
 ├── src/                  # 源代码目录
 │   ├── config/           # 配置相关模块
 │   ├── core/             # 核心功能模块
@@ -44,8 +44,8 @@ Iwaratown/
 - `Custom_Struc.py`: 自定义数据结构，定义视频、作者等数据模型
 - `DownloadProgressTracker.py`: 下载进度跟踪器
 - `Download_Engine.py`: 下载引擎，实现不同平台的视频下载功能
-- `Iwara_Login.py`: Iwara 平台的登录管理
 - `Search_Engine.py`: 搜索引擎，实现不同平台的视频搜索功能
+- `CScraper.py`: 爬虫工具，实现动态爬虫策略选择
 
 #### 3.1.3 src/ui/ - 用户界面模块
 
@@ -57,7 +57,6 @@ Iwaratown/
 
 提供应用程序所需的各种工具函数和辅助类。
 
-- `CScraper.py`: CloudFlare 爬虫工具，用于绕过网站的 CloudFlare 保护
 - `Logger.py`: 日志工具，实现自定义日志格式和颜色输出
 - `update_logger.py`: 更新日志记录工具，用于记录版本更新信息
 
@@ -118,6 +117,7 @@ python src/ui/UI.py
 - bs4 (BeautifulSoup): 用于解析 HTML 页面
 - yt-dlp: 用于视频下载
 - colorama: 用于在终端中输出彩色日志
+- DrissionPage: 用于浏览器自动化
 
 ## 8. 项目结构优势
 

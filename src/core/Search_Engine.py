@@ -15,110 +15,14 @@ from bs4 import BeautifulSoup
 
 from core.Custom_Struc import *
 from config.Init_Settings import *
-from core.Iwara_Login import il
 from utils.Logger import get_logger
 logger: logging.Logger = get_logger("搜索")
 from config.Settings_Manager import sm, cm
 from core.Channel import Channel, channel_manager
-from utils.CScraper import cloud_scraper, chrome_scraper
+from utils.CScraper import scraper_manager
 
 
 class Search_Engine:
-    @staticmethod
-    def iw_search_author(keyword: str) -> list[stru_iw_author]:
-        api_url: str = f"{sm.settings.get('Iwara_API_Hostname', DEFAULT_SETTINGS['Iwara_API_Hostname'])}"
-        api_url += f"/search?type=users&page=0&query={keyword}"
-
-        try:
-            logger.info(f"向Iwara API发送作者搜索请求: {api_url}")
-            # 获取认证头
-            headers = il.get_auth_header()
-            if headers:
-                logger.debug(f"添加认证token到请求头")
-            
-            response = cloud_scraper.get(
-                url=api_url,
-                headers=headers,
-                timeout=5, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
-            )
-            logger.debug(f"status_code: {response.status_code}")
-            response.raise_for_status()
-            data: dict = response.json()
-
-            authors: list[stru_iw_author] = []
-            user: dict
-            for user in data.get("results", []):
-                authors.append(stru_iw_author(user))
-            logger.info(f"找到 {len(authors)} 个作者")
-            return authors
-        
-        except requests.exceptions.Timeout as e:
-            logger.error(f"请求Iwara API超时: {e}")
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"连接Iwara API失败: {e}")
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"Iwara API返回HTTP错误: {e}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"请求Iwara API时发生错误: {e}")
-        except json.JSONDecodeError as e:
-            logger.error(f"解析Iwara API响应JSON失败: {e}")
-        except Exception as e:
-            logger.error(f"处理Iwara API响应时发生未知错误: {e}")
-        return []
-    
-    @staticmethod
-    def iw_search_video(author_id: str) -> list[stru_iw_video]:
-        video_list: list[stru_iw_video] = []
-        current_page: int = 0
-        try:
-            for _ in range(MAX_PAGE):
-                api_url = f"https://api.iwara.tv/videos?rating=all&sort=date&page={current_page}&user={author_id}"
-                
-                logger.info(f"向Iwara API发送视频列表请求: {api_url}")
-                # 获取认证头
-                headers = il.get_auth_header()
-                if headers:
-                    logger.debug(f"添加认证token到请求头")
-                
-                response = cloud_scraper.get(
-                    url=api_url,
-                    headers=headers,
-                    timeout=30, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
-                )
-                logger.debug(f"status_code: {response.status_code}")
-                response.raise_for_status()
-                data: dict = response.json()
-
-                if not data.get("results", []):
-                    break
-                item: dict
-                for item in data.get("results", []):
-                    temp = stru_iw_video(item)
-                    temp.updatedAt = datetime.datetime.fromisoformat(temp.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
-                    # temp.createdAt = datetime.datetime.fromisoformat(temp.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
-                    # temp.updatedAt = datetime.datetime.fromisoformat(temp.updatedAt.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
-                    video_list.append(temp)
-                if len(data.get("results", [])) < 32:
-                    break
-                current_page += 1
-                        
-            logger.info(f"成功获取 {len(video_list)} 个视频")
-            return video_list
-            
-        except requests.exceptions.Timeout as e:
-            logger.error(f"请求Iwara API超时: {e}")
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"连接Iwara API失败: {e}")
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"Iwara API返回HTTP错误: {e}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"请求Iwara API时发生错误: {e}")
-        except json.JSONDecodeError as e:
-            logger.error(f"解析Iwara API响应JSON失败: {e}")
-        except Exception as e:
-            logger.error(f"处理Iwara API响应时发生未知错误: {e}")
-        return []
-
     _last_search_timestamp: float = 0
     @staticmethod
     def xpv_search_video(keyword: str, classid: int=21) -> list[stru_xpv_video]:
@@ -141,7 +45,7 @@ class Search_Engine:
         try:
             logger.info(f"向Xpv发送视频搜索请求: {php_url}")
             logger.debug(f"post_data: {post_data}")
-            response = cloud_scraper.post(
+            response = scraper_manager.get_cloud_scraper().get_instance().post(
                 url=php_url, data=post_data,
                 timeout=5, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
             )
@@ -162,7 +66,7 @@ class Search_Engine:
             for _ in range(MAX_PAGE):
                 logger.info(f"获取Xpv搜索结果页面 第{current_page}页: {redirect_url}")
                 target_url = urljoin(base_url, f"/e/search/result/index.php?page={current_page}&searchid={searchid}")
-                response = cloud_scraper.get(
+                response = scraper_manager.get_cloud_scraper().get_instance().get(
                     url=target_url,
                     timeout=7, proxies=PROXIES, verify=sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"])
                 )
@@ -235,10 +139,29 @@ class Search_Engine:
                 logger.info(f"获取Hanime1搜索结果页面 第{current_page}页: {get_url}")
                 logger.debug(f"params: {params}")
 
-                soup: BeautifulSoup = chrome_scraper.get(
-                    url=get_url + "?" + urlencode(params),
-                    target_ele="#home-rows-wrapper"
-                )
+                from bs4 import BeautifulSoup
+                
+                # Hanime1首先尝试使用cloudscraper
+                logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {get_url}?{urlencode(params)}")
+                try:
+                    response = scraper_manager.get_cloud_scraper().get_response(get_url + "?" + urlencode(params), timeout=10)
+                    if response.status_code == 403:
+                        logger.warning(f"cloudscraper返回403，切换到chromium scraper")
+                        # 使用chromium scraper
+                        soup: BeautifulSoup = scraper_manager.get_chromium_scraper().get_soup(
+                            get_url + "?" + urlencode(params),
+                            10
+                        )
+                    else:
+                        response.raise_for_status()
+                        soup = BeautifulSoup(response.text, "html.parser")
+                except Exception as e:
+                    logger.warning(f"cloudscraper爬取失败: {e}，切换到chromium scraper")
+                    # 使用chromium scraper
+                    soup = scraper_manager.get_chromium_scraper().get_soup(
+                        get_url + "?" + urlencode(params),
+                        10
+                    )
                 # 每个视频的div标签
                 current_video_list = soup.find_all("div", class_="video-item-container")
                 if not current_video_list:
@@ -287,26 +210,6 @@ def register_search_channels():
         video_struc=stru_xpv_video,
     )
     channel_manager.register_channel(xpv_channel)
-    
-    # 注册Iwara渠道 - 定义专用搜索函数
-    def iwara_search_wrapper(keyword):
-        """Iwara搜索包装函数"""
-        authors = Search_Engine.iw_search_author(keyword)
-        if authors:
-            return Search_Engine.iw_search_video(authors[0].id)
-        return []
-    
-    iwara_channel = Channel(
-        name="Iwara",
-        hostname_key="Iwara_Hostname",
-        download_path_key="Iwara_Download_Path",
-        search_method=iwara_search_wrapper,
-        download_methods={
-            "default": Download_Engine.iw_download_video
-        },
-        video_struc=stru_iw_video,
-    )
-    channel_manager.register_channel(iwara_channel)
     
     # 注册Hanime1渠道
     hanime1_channel = Channel(
