@@ -18,7 +18,6 @@ DEFAULT_HEADERS: dict = {
     # Iwara不可以用Accept-Encoding
 }
 
-# 渠道配置 - 集中管理
 CHANNELS_CONFIG = {
     "Xpv": {
         "hostname_key": "Xpv_Hostname",
@@ -43,8 +42,8 @@ CHANNELS_CONFIG = {
 }
 
 PROXIES: dict = {
-    "http": "http://127.0.0.1:10809",
-    "https": "http://127.0.0.1:10809"
+    "http": "http://127.0.0.1:7897",
+    "https": "http://127.0.0.1:7897"
 }
 
 # 需要在UI.py/_download_worker中对应值和方法

@@ -1,9 +1,9 @@
-from CScraper import scraper
+from utils.CScraper import cloud_scraper
 from requests.auth import AuthBase
 import json
 
-from Custom_Struc import sm
-from Init_Settings import DEFAULT_SETTINGS
+from config.Settings_Manager import sm
+from config.Init_Settings import DEFAULT_SETTINGS
 
 api_url = sm.settings.get("Iwara_API_Hostname", DEFAULT_SETTINGS["Iwara_API_Hostname"])
 
@@ -22,7 +22,7 @@ class IwaraLogin:
     提供登录、检查token有效性、刷新token等功能
     """
     def __init__(self):
-        self.scraper = scraper
+        self.scraper = cloud_scraper
         self.api_url: str = api_url
         self.token: str = ""
         self.user_info: dict = {}

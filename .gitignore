@@ -1,7 +1,10 @@
 /.trae
 /备份或弃用
 /参考资料
-/__pycache__
-iwtn_settings_1.0.1.json
+__pycache__
+/backup
+/drissionpage_docs_en
+
+*.json
+
 带日期的标题转换成不带日期的标题.py
-iwtn_cache_1.0.1.json
