@@ -778,9 +778,7 @@ class Win_Main(tb.Window):
             os.startfile(download_path)
         except Exception as e:
             logger.error(f"打开本地文件夹失败: {e}")
-    
 
-    
     def start_search(self) -> None:
         keyword: str = self.entry_search.get().strip()
         source: str = self.combobox_source.get()

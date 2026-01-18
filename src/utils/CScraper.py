@@ -1,14 +1,10 @@
 import logging
-import queue
-import threading
 
 from bs4 import BeautifulSoup
 import cloudscraper
 from DrissionPage import ChromiumOptions, ChromiumPage
 
-from ..core.Custom_Struc import *
 from ..config.Init_Settings import HANIME1_ELEMENTS
-from ..config.Settings_Manager import sm
 from ..utils.Logger import get_logger
 
 logger: logging.Logger = get_logger("爬虫管理器")
@@ -72,72 +68,12 @@ class ChromiumScraper:
         # 不再创建Chrome实例，使用ScraperManager提供的唯一Chrome实例
         pass
     
-    def get_soup(self, url: str, timeout: int = 20) -> BeautifulSoup:
-        """
-        使用ChromiumScraper获取网页soup对象
-        
-        Args:
-            url: 要爬取的URL
-            timeout: 超时时间
-            
-        Returns:
-            BeautifulSoup对象
-        """
-        max_retries = 2
-        for retry in range(max_retries):
-            try:
-                # 获取唯一的Chrome实例
-                main_page = scraper_manager.get_main_chromium_page()
-                
-                # 新建标签页
-                logger.info(f"新建标签页，访问: {url}")
-                new_tab = main_page.new_tab()
-                
-                try:
-                    # 在新标签页中访问网页
-                    new_tab.get(url)
-                    
-                    # 自动选择目标元素选择器
-                    if "search" in url.lower():
-                        target_ele = HANIME1_ELEMENTS["SEARCH_RESULTS"]  # 搜索结果页面
-                    else:
-                        target_ele = HANIME1_ELEMENTS["DOWNLOAD_BUTTON"]  # 视频页面
-                    
-                    logger.info(f"等待元素 {target_ele} 出现")
-                    new_tab.wait.ele_displayed(target_ele, timeout=timeout)
-                    
-                    # 获取数据
-                    soup = BeautifulSoup(new_tab.html, "html.parser")
-                    
-                    # 获取标签页数量
-                    tabs = main_page.get_tabs()
-                    
-                    # 如果标签页数量大于1，关闭当前标签页
-                    if len(tabs) > 1:
-                        logger.info("关闭标签页")
-                        new_tab.close()
-                    
-                    return soup
-                except Exception as e:
-                    # 确保标签页被关闭
-                    tabs = main_page.get_tabs()
-                    if len(tabs) > 1:
-                        try:
-                            new_tab.close()
-                        except:
-                            pass
-                    raise e
-            except Exception as e:
-                logger.warning(f"ChromiumScraper.get_soup失败: {e}，正在重试 ({retry + 1}/{max_retries})")
-        # 重试次数用完，抛出异常
-        raise Exception(f"ChromiumScraper.get_soup多次尝试失败: {url}")
-    
-    def get_download_link(self, url: str, timeout: int = 20) -> str:
+    def get_download_link(self, video, timeout: int = 20) -> str:
         """
         使用ChromiumScraper获取下载链接
         
         Args:
-            url: 要爬取的URL
+            video: 视频对象，包含视频信息
             timeout: 超时时间
             
         Returns:
@@ -150,13 +86,13 @@ class ChromiumScraper:
                 main_page = scraper_manager.get_main_chromium_page()
                 
                 # 新建标签页
-                logger.info(f"新建标签页，获取下载链接: {url}")
+                logger.info(f"新建标签页，获取下载链接: {video.url}")
                 new_tab = main_page.new_tab()
                 
                 try:
                     # 在新标签页中访问网页
-                    new_tab.get(url)
-                    
+                    new_tab.get(video.url)
+
                     logger.info("等待下载引导页面出现")
                     new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"], timeout=timeout)
                     download_guide_link: str = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"]).attr("href"))
@@ -187,7 +123,7 @@ class ChromiumScraper:
             except Exception as e:
                 logger.warning(f"ChromiumScraper.get_download_link失败: {e}，正在重试 ({retry + 1}/{max_retries})")
         # 重试次数用完，抛出异常
-        raise Exception(f"ChromiumScraper.get_download_link多次尝试失败: {url}")
+        raise Exception(f"ChromiumScraper.get_download_link多次尝试失败: {video.url}")
 
  
 class ScraperManager:

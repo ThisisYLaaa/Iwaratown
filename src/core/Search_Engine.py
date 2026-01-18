@@ -114,7 +114,105 @@ class Search_Engine:
         return []
 
     @staticmethod
+    def _parse_hanime1_video_items(soup: BeautifulSoup, get_url: str, params: dict) -> list[stru_hanime1_video]:
+        """解析Hanime1搜索结果页面中的视频项
+        
+        Args:
+            soup: BeautifulSoup对象，包含搜索结果页面的HTML
+            get_url: 搜索页面的基础URL
+            params: 当前请求的参数
+            
+        Returns:
+            解析出的视频列表
+        """
+        video_list = []
+        # 查找所有视频项容器
+        current_video_list = soup.find_all("div", class_="video-item-container")
+        
+        for div in current_video_list:
+            # div标签本身有标题title, div下的a标签有视频链接href
+            title = str(div.get("title", ""))
+            # 从title中提取author,如果没有则使用unknown
+            author = re.search(r"\[(.*?)\]", title)
+            author = author.group(1) if author else "unknown"
+            a_tag = div.find("a", href=True)
+            if a_tag:
+                href = str(a_tag["href"])
+                # 结合get_url和params, 构造完整的视频链接
+                params_string = urlencode(params)
+                furl = f"{get_url}?{params_string}"
+                video_list.append(stru_hanime1_video({"title": title, "url": href, "author": author, "furl": furl}))
+        
+        return video_list
+    
+    @staticmethod
+    def _get_hanime1_page_html(url: str) -> str:
+        """获取Hanime1页面的HTML内容，优先使用cloudscraper，失败则使用chromium scraper
+        
+        Args:
+            url: 要获取的页面URL
+            
+        Returns:
+            页面的HTML内容
+        """
+        # 检查hanime1 cloudscraper是否已失败
+        if not scraper_manager.is_hanime1_cloudscraper_failed():
+            try:
+                logger.info(f"尝试使用cloudscraper获取页面: {url}")
+                response = scraper_manager.get_cloud_scraper().get_response(url, timeout=10)
+                if response.status_code == 403:
+                    logger.warning(f"cloudscraper返回403，切换到chromium scraper")
+                    scraper_manager.set_hanime1_cloudscraper_failed(True)
+                else:
+                    response.raise_for_status()
+                    return response.text
+            except Exception as e:
+                logger.warning(f"cloudscraper获取页面失败: {e}，切换到chromium scraper")
+                scraper_manager.set_hanime1_cloudscraper_failed(True)
+        
+        # 使用chromium scraper获取页面HTML
+        try:
+            logger.info(f"使用chromium scraper获取页面: {url}")
+            # 获取唯一的Chrome实例
+            main_page = scraper_manager.get_main_chromium_page()
+            
+            # 新建标签页
+            new_tab = main_page.new_tab()
+            
+            try:
+                # 在新标签页中访问网页
+                new_tab.get(url)
+                
+                # 等待搜索结果出现
+                logger.info("等待搜索结果容器出现")
+                new_tab.wait.ele_displayed(HANIME1_ELEMENTS["SEARCH_RESULTS"], timeout=10)
+                
+                # 获取页面HTML，交给bs4处理
+                html = new_tab.html
+                return html
+            finally:
+                # 确保标签页被关闭
+                tabs = main_page.get_tabs()
+                if len(tabs) > 1:
+                    logger.info("关闭标签页")
+                    try:
+                        new_tab.close()
+                    except:
+                        pass
+        except Exception as e:
+            logger.error(f"chromium scraper获取页面失败: {e}")
+            raise
+    
+    @staticmethod
     def hanime1_search_video(keyword: str) -> list[stru_hanime1_video]:
+        """搜索Hanime1视频，优化后的逻辑
+        
+        优化点：
+        1. 提取重复的视频信息处理逻辑为单独函数
+        2. chromium scraper获取HTML后使用bs4处理，不直接定位元素
+        3. 简化cloudscraper和chromium scraper的切换逻辑
+        4. 统一数据提取逻辑，减少重复代码
+        """
         # query=keyword&type=&genre=&sort=&date=&duration=
         params: dict[str, str|int] = {
             "query": keyword,
@@ -131,79 +229,37 @@ class Search_Engine:
             video_list: list[stru_hanime1_video] = []
             
             current_page: int = 1
-            current_video_list = []
             for _ in range(MAX_PAGE):
                 params["page"] = current_page
                 logger.info(f"获取Hanime1搜索结果页面 第{current_page}页: {get_url}")
                 logger.debug(f"params: {params}")
 
-                from bs4 import BeautifulSoup
+                # 构建完整的请求URL
+                full_url = f"{get_url}?{urlencode(params)}"
                 
-                # 检查hanime1 cloudscraper是否已失败
-                if scraper_manager.is_hanime1_cloudscraper_failed():
-                    logger.info(f"hanime1 cloudscraper已失败，直接使用chromium scraper: {get_url}?{urlencode(params)}")
-                    # 直接使用chromium scraper
-                    # 使用线程专用的Chrome实例
-                    scraper = scraper_manager.get_chromium_scraper()
-                    soup: BeautifulSoup = scraper.get_soup(
-                        get_url + "?" + urlencode(params),
-                        10
-                    )
-
-                else:
-                    # Hanime1首先尝试使用cloudscraper
-                    logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {get_url}?{urlencode(params)}")
-                    try:
-                        response = scraper_manager.get_cloud_scraper().get_response(get_url + "?" + urlencode(params), timeout=10)
-                        if response.status_code == 403:
-                            logger.warning(f"cloudscraper返回403，切换到chromium scraper")
-                            # 设置cloudscraper失败标志
-                            scraper_manager.set_hanime1_cloudscraper_failed(True)
-                            # 使用chromium scraper
-                            # 使用线程专用的Chrome实例
-                            scraper = scraper_manager.get_chromium_scraper()
-                            soup= scraper.get_soup(
-                                get_url + "?" + urlencode(params),
-                                10
-                            )
-
-                        else:
-                            response.raise_for_status()
-                            soup = BeautifulSoup(response.text, "html.parser")
-                    except Exception as e:
-                        logger.warning(f"cloudscraper爬取失败: {e}，切换到chromium scraper")
-                        # 设置cloudscraper失败标志
-                        scraper_manager.set_hanime1_cloudscraper_failed(True)
-                        # 使用chromium scraper
-                        # 使用线程专用的Chrome实例
-                        scraper = scraper_manager.get_chromium_scraper()
-                        soup = scraper.get_soup(
-                            get_url + "?" + urlencode(params),
-                            10
-                        )
-
-                # 每个视频的div标签
-                current_video_list = soup.find_all("div", class_="video-item-container")
-                if not current_video_list:
+                try:
+                    # 获取页面HTML
+                    html = Search_Engine._get_hanime1_page_html(full_url)
+                    
+                    # 使用bs4解析HTML
+                    soup = BeautifulSoup(html, "html.parser")
+                    
+                    # 解析视频项
+                    parsed_videos = Search_Engine._parse_hanime1_video_items(soup, get_url, params)
+                    video_list.extend(parsed_videos)
+                    
+                    # 检查是否还有更多页面
+                    if len(parsed_videos) < 60:
+                        logger.info(f"当前页只获取到 {len(parsed_videos)} 个视频，停止搜索")
+                        break
+                    
+                    current_page += 1
+                except Exception as e:
+                    logger.error(f"处理页面失败: {e}")
                     break
-                for div in current_video_list:
-                    # div标签本身有标题title, div下的a标签有视频链接href
-                    title: str = str(div.get("title", ""))
-                    # 从title中提取author,如果没有则使用unknown
-                    author = re.search(r"\[(.*?)\]", title)
-                    author = author.group(1) if author else "unknown"
-                    a_tag = div.find("a", href=True)
-                    if a_tag:
-                        href: str = str(a_tag["href"])
-                        # 结合get_url和params, 构造完整的视频链接
-                        params_string = urlencode(params)
-                        furl: str = f"{get_url}?{params_string}"
-                        video_list.append(stru_hanime1_video({"title": title, "url": href, "author": author, "furl": furl}))
-                if len(current_video_list) < 60:
-                    break
-                current_page += 1
             else:
                 logger.warning(f"搜索达到上限, 暂停搜索")
+            
             logger.info(f"成功获取 {len(video_list)} 个视频")
             return video_list
 

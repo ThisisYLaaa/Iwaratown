@@ -363,26 +363,61 @@ class Download_Engine:
         """下载Hanime1视频"""
         download_link: str = ""
 
+        save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
+        if os.path.exists(save_path):
+            logger.info(f"文件已存在，跳过下载: {video.savetitle}")
+            return True
+
         try:
             # 检查目录是否存在
             os.makedirs(video.dpath, exist_ok=True)
-            
-            # 构建保存路径
-            save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
-            
-            # 如果文件已存在，跳过下载
-            if os.path.exists(save_path):
-                logger.info(f"文件已存在，跳过下载: {video.savetitle}")
-                return True
-            
-            # 更新视频日期
-            video._update_updatedAt_from_url()
 
-            # 使用线程专用的Chrome实例
-            scraper = scraper_manager.get_chromium_scraper()
+            # 获取唯一的Chrome实例
+            main_page = scraper_manager.get_main_chromium_page()
             
-            # 获取下载链接
-            download_link = scraper.get_download_link(video.url)
+            # 新建标签页
+            logger.info(f"新建标签页，访问视频页面: {video.url}")
+            new_tab = main_page.new_tab()
+            
+            try:
+                # 在新标签页中访问网页
+                new_tab.get(video.url)
+                
+                # 如果没有savetitle，先更新日期
+                if not video.savetitle:
+                    logger.info("更新视频日期信息")
+                    video.update_date_from_chromium_tab(new_tab)
+                    
+                # 确保savetitle存在后再构建保存路径
+                if not video.savetitle:
+                    logger.error(f"无法获取视频日期，无法生成savetitle: {video.url}")
+                    return False
+                
+                # 构建保存路径
+                save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
+                
+                # 如果文件已存在，跳过下载
+                if os.path.exists(save_path):
+                    logger.info(f"文件已存在，跳过下载: {video.savetitle}")
+                    return True
+                
+                logger.info("等待下载引导页面出现")
+                new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"], timeout=20)
+                download_guide_link: str = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"]).attr("href"))
+                
+                new_tab.get(download_guide_link)
+                logger.info("等待下载链接出现")
+                new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_LINK"], timeout=20)
+                download_link = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_LINK"]).attr("data-url"))
+            finally:
+                # 确保标签页被关闭
+                tabs = main_page.get_tabs()
+                if len(tabs) > 1:
+                    logger.info("关闭标签页")
+                    try:
+                        new_tab.close()
+                    except:
+                        pass
             
             # 下载视频 yt-dlp
             opts = {

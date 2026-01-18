@@ -1,7 +1,7 @@
 import datetime
 import os
 import re
-from typing import Any
+from typing import Any, cast
 
 from bs4 import BeautifulSoup
 
@@ -145,23 +145,51 @@ class stru_hanime1_video:
         if self.updatedAt:
             return True
         
-        soup = None
-        
         try:
+            # 定义日期信息提取函数，减少重复代码
+            def extract_date_from_chromium() -> str:
+                # 获取唯一的Chrome实例
+                main_page = scraper_manager.get_main_chromium_page()
+                
+                # 新建标签页
+                logger.info(f"新建标签页，访问: {self.url}")
+                new_tab = main_page.new_tab()
+                
+                try:
+                    # 在新标签页中访问网页
+                    new_tab.get(self.url)
+                    
+                    # 等待视频详情元素出现 - 使用更可靠的选择器，避免hidden类影响
+                    # 选择器说明：.video-details-wrapper是包含视频详情的容器，不使用hidden-*类以提高兼容性
+                    logger.info("等待元素 .video-details-wrapper 出现")
+                    # 使用tag:div@@class:video-details-wrapper语法，模糊匹配class包含video-details-wrapper的div元素
+                    video_details_selector = "tag:div@@class:video-details-wrapper"
+                    new_tab.wait.ele_displayed(video_details_selector, timeout=10)
+                    
+                    # 提取日期信息 - 直接在视频详情容器内查找包含日期的元素
+                    div_info = new_tab.ele(video_details_selector)
+                    div_text: str = cast(str, div_info.text)
+                    return self._extract_date_from_filename(div_text)
+                finally:
+                    # 确保标签页被关闭
+                    tabs = main_page.get_tabs()
+                    if len(tabs) > 1:
+                        logger.info("关闭标签页")
+                        try:
+                            new_tab.close()
+                        except:
+                            pass
+            
             # 检查hanime1 cloudscraper是否已失败
             if scraper_manager.is_hanime1_cloudscraper_failed():
                 logger.info(f"hanime1 cloudscraper已失败，直接使用chromium scraper: {self.url}")
                 # 直接使用chromium scraper
-                try:
-                    # 使用线程专用的Chrome实例
-                    scraper = scraper_manager.get_chromium_scraper()
-                    soup = scraper.get_soup(
-                        self.url,
-                        10
-                    )
-                except Exception as ce:
-                    logger.error(f"chromium scraper爬取失败: {ce}")
-                    return False
+                date = extract_date_from_chromium()
+                if date:
+                    self._update_savetitle(date)
+                    self._rename_video_file()
+                    return True
+                return False
             else:
                 # Hanime1首先尝试使用cloudscraper
                 logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {self.url}")
@@ -172,50 +200,60 @@ class stru_hanime1_video:
                         # 设置cloudscraper失败标志
                         scraper_manager.set_hanime1_cloudscraper_failed(True)
                         # 使用chromium scraper
-                        # 使用线程专用的Chrome实例
-                        scraper = scraper_manager.get_chromium_scraper()
-                        soup = scraper.get_soup(
-                            self.url,
-                            10
-                        )
+                        date = extract_date_from_chromium()
+                        if date:
+                            self._update_savetitle(date)
+                            self._rename_video_file()
+                            return True
+                        return False
                     else:
                         response.raise_for_status()
+                        # 使用cloudscraper返回的内容解析
                         soup = BeautifulSoup(response.text, "html.parser")
+                        # 使用更可靠的选择器，模糊匹配class包含video-details-wrapper的div元素
+                        div_info = soup.select_one("div.video-details-wrapper")
+                        if div_info:
+                            date = self._extract_date_from_filename(div_info.text)
+                            if date:
+                                self._update_savetitle(date)
+                                self._rename_video_file()
+                                return True
                 except Exception as e:
                     logger.warning(f"cloudscraper爬取失败: {e}，切换到chromium scraper")
                     # 设置cloudscraper失败标志
                     scraper_manager.set_hanime1_cloudscraper_failed(True)
                     # 使用chromium scraper
-                    try:
-                        # 使用线程专用的Chrome实例
-                        scraper = scraper_manager.get_chromium_scraper()
-                        soup = scraper.get_soup(
-                            self.url,
-                            10
-                        )
-                    except Exception as ce:
-                        logger.error(f"chromium scraper爬取失败: {ce}")
-                        return False
-            
-            if soup is None:
-                logger.error(f"无法获取页面内容: {self.url}")
-                return False
-            
-            div_info = soup.find("div", class_="video-details-wrapper hidden-sm hidden-md hidden-lg hidden-xl")
-            if not div_info:
-                logger.error(f"无法解析视频信息: {self.url}")
-                return False
-            
-            date = self._extract_date_from_filename(div_info.text)
-            if date:
-                self._update_savetitle(date)
-                self._rename_video_file()
-                return True
+                    date = extract_date_from_chromium()
+                    if date:
+                        self._update_savetitle(date)
+                        self._rename_video_file()
+                        return True
+                    return False
             
         except Exception as e:
             logger.error(f"访问视频页面失败 {self.url}: {e}")
         
         return False
+    
+    def update_date_from_chromium_tab(self, tab) -> bool:
+        """从Chromium标签页中更新日期信息"""
+        try:
+            # 等待视频详情元素出现 - 使用更可靠的选择器，避免hidden类影响
+            logger.info("等待元素 .video-details-wrapper 出现")
+            # 使用tag:div@@class:video-details-wrapper语法，模糊匹配class包含video-details-wrapper的div元素
+            video_details_selector = "tag:div@@class:video-details-wrapper"
+            tab.wait.ele_displayed(video_details_selector, timeout=10)
+            
+            # 提取日期信息 - 直接在视频详情容器内查找包含日期的元素
+            div_info = tab.ele(video_details_selector)
+            date = self._extract_date_from_filename(div_info.text)
+            if date:
+                self._update_savetitle(date)
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"从标签页提取日期失败: {e}")
+            return False
     
     def get_updatedAt_timestamp(self) -> float:
         """将YYYY-MM-DD格式的日期转换为时间戳"""

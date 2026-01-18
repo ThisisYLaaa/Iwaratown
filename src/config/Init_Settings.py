@@ -36,7 +36,7 @@ PROXIES: dict = {
 
 # Hanime1 元素检测配置
 HANIME1_ELEMENTS = {
-    "SEARCH_RESULTS": "#home-rows-wrapper",
+    "SEARCH_RESULTS": ".horizontal-row",
     "DOWNLOAD_BUTTON": "#downloadBtn",
     "DOWNLOAD_LINK": ".exoclick-popunder juicyads-popunder"
 }
