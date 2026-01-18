@@ -1,40 +1,29 @@
+import logging
+
 from bs4 import BeautifulSoup
 import cloudscraper
-from DrissionPage import ChromiumPage, ChromiumOptions
+from DrissionPage import ChromiumOptions, ChromiumPage
 
-import logging
-from .Logger import get_logger
-from config.Init_Settings import HANIME1_ELEMENTS
+from ..config.Init_Settings import HANIME1_ELEMENTS
+from ..utils.Logger import get_logger
+
 logger: logging.Logger = get_logger("爬虫管理器")
 
 
 class CloudScraper:
     """CloudScraper类，专门处理cloudscraper相关功能"""
     
-    # 延迟初始化单例
-    _instance = None
-    _initialized = False
-    
-    def __new__(cls):
-        """单例模式实现"""
-        if cls._instance is None:
-            cls._instance = super(CloudScraper, cls).__new__(cls)
-        return cls._instance
-    
     def __init__(self):
         """初始化CloudScraper实例"""
-        if not CloudScraper._initialized:
-            logger.info("创建新的CloudScraper实例")
-            self.scraper = cloudscraper.create_scraper(
-                browser={
-                    'browser': 'chrome',
-                    'platform': 'windows',
-                    'desktop': True,
-                    'mobile': False,
-                    'version': '142.0.0.0'
-                }
-            )
-            CloudScraper._initialized = True
+        self.scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True,
+                'mobile': False,
+                'version': '142.0.0.0'
+            }
+        )
     
     def get_soup(self, url: str, timeout: int = 10) -> BeautifulSoup:
         """
@@ -74,25 +63,12 @@ class CloudScraper:
 class ChromiumScraper:
     """ChromiumScraper类，专门处理DrissionPage相关功能"""
     
-    # 延迟初始化单例
-    _instance = None
-    _initialized = False
-    
-    def __new__(cls):
-        """单例模式实现"""
-        if cls._instance is None:
-            cls._instance = super(ChromiumScraper, cls).__new__(cls)
-        return cls._instance
-    
     def __init__(self):
         """初始化ChromiumScraper实例"""
-        if not ChromiumScraper._initialized:
-            logger.info("创建新的ChromiumScraper实例")
-            co = ChromiumOptions().auto_port()
-            co.incognito(True)
-            self.page = ChromiumPage(co)
-            self.page.set.window.size(600, 300)
-            ChromiumScraper._initialized = True
+        co = ChromiumOptions().auto_port()
+        co.incognito(True)
+        self.page = ChromiumPage(co)
+        self.page.set.window.size(600, 300)
     
     def get_soup(self, url: str, timeout: int = 10) -> BeautifulSoup:
         """
@@ -179,15 +155,33 @@ class ChromiumScraper:
             # 重新创建ChromiumPage实例
             self._init_chromium_page()
     
-
+    def close(self):
+        """关闭Chromium浏览器"""
+        if hasattr(self, 'page'):
+            logger.info("关闭Chromium浏览器")
+            self.page.close()
 
 
 class ScraperManager:
     """爬虫管理器，统一管理不同类型的爬虫实例"""
     
+    # 使用类变量存储单例实例
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        """单例模式实现"""
+        if cls._instance is None:
+            cls._instance = super(ScraperManager, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        self.cloud_scraper = CloudScraper()
-        self.chromium_scraper = ChromiumScraper()
+        """初始化ScraperManager实例"""
+        # 只初始化一次
+        if not hasattr(self, '_initialized'):
+            logger.info("创建新的ScraperManager实例")
+            self.cloud_scraper = CloudScraper()
+            self.chromium_scraper = ChromiumScraper()
+            self._initialized = True
     
     def get_cloud_scraper(self) -> CloudScraper:
         """获取CloudScraper实例"""
@@ -196,10 +190,12 @@ class ScraperManager:
     def get_chromium_scraper(self) -> ChromiumScraper:
         """获取ChromiumScraper实例"""
         return self.chromium_scraper
+    
+    def close(self):
+        """关闭所有爬虫实例"""
+        logger.info("关闭所有爬虫实例")
+        self.chromium_scraper.close()
 
 
 # 创建全局爬虫管理器实例
 scraper_manager = ScraperManager()
-
-
-

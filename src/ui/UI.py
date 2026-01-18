@@ -7,18 +7,18 @@ import threading
 from typing import Callable, Optional
 
 import ttkbootstrap as tb
-from ttkbootstrap.dialogs.dialogs import Messagebox
 from tkinter import filedialog as fd
 import tkinter as tk
+from ttkbootstrap.dialogs.dialogs import Messagebox
 
-from core.Custom_Struc import *
-from config.Init_Settings import *
+from ..config.Init_Settings import *
+from ..core.Channel import channel_manager, Channel
+from ..core.Custom_Struc import *
+from ..core.Search_Engine import Search_Engine
+from ..config.Settings_Manager import sm, cm
+from ..utils.Logger import get_logger
 
-from utils.Logger import get_logger
 logger: logging.Logger = get_logger("⭐VideoDownloader⭐")
-from core.Search_Engine import Search_Engine
-from config.Settings_Manager import sm, cm
-from core.Channel import channel_manager, Channel
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""

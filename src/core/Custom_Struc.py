@@ -1,16 +1,16 @@
-import datetime, os, re
+import datetime
+import os
+import re
 from typing import Any
+
 from bs4 import BeautifulSoup
 
-from utils.CScraper import scraper_manager
-from bs4 import BeautifulSoup
-from utils.Logger import get_logger
+from ..config.Init_Settings import *
+from ..config.Settings_Manager import sm, cm
+from ..utils.CScraper import scraper_manager
+from ..utils.Logger import get_logger
+
 logger = get_logger("Custom_Struc")
-from utils.Logger import get_logger
-logger = get_logger("视频")
-
-from config.Init_Settings import *
-from config.Settings_Manager import sm, cm
 
 class stru_xpv_video:
     def __init__(self, data: dict):

@@ -1,25 +1,23 @@
-import datetime
-import json
 import logging
 import re
 import time
 from urllib.parse import urlencode, urljoin
 
-# 禁用不安全的HTTPS请求警告
+import cloudscraper
+from bs4 import BeautifulSoup
 import urllib3
+
+# 禁用不安全的HTTPS请求警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-import cloudscraper
-import requests
-from bs4 import BeautifulSoup
+from ..core.Channel import Channel, channel_manager
+from ..core.Custom_Struc import *
+from ..config.Init_Settings import *
+from ..config.Settings_Manager import sm
+from ..utils.CScraper import scraper_manager
+from ..utils.Logger import get_logger
 
-from core.Custom_Struc import *
-from config.Init_Settings import *
-from utils.Logger import get_logger
 logger: logging.Logger = get_logger("搜索")
-from config.Settings_Manager import sm, cm
-from core.Channel import Channel, channel_manager
-from utils.CScraper import scraper_manager
 
 
 class Search_Engine:
@@ -223,8 +221,6 @@ def register_search_channels():
         video_struc=stru_hanime1_video,
     )
     channel_manager.register_channel(hanime1_channel)
-    
-    logger.info(f"已注册 {len(channel_manager.list_channels())} 个渠道")
 
 # 自动注册渠道
 register_search_channels()

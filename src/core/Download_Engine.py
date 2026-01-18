@@ -12,13 +12,14 @@ import cloudscraper
 from bs4 import BeautifulSoup
 import yt_dlp
 
-from core.Custom_Struc import *
-from core.DownloadProgressTracker import DownloadProgressTracker
-from config.Init_Settings import *
-from utils.Logger import get_logger
+from ..core.Custom_Struc import *
+from ..core.DownloadProgressTracker import DownloadProgressTracker
+from ..config.Init_Settings import *
+from ..config.Settings_Manager import sm, cm
+from ..utils.CScraper import scraper_manager
+from ..utils.Logger import get_logger
+
 logger: logging.Logger = get_logger("下载")
-from config.Settings_Manager import sm, cm
-from utils.CScraper import scraper_manager
 
 class Download_Engine:
     @staticmethod
