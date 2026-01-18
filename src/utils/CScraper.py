@@ -182,6 +182,8 @@ class ScraperManager:
             self.cloud_scraper = CloudScraper()
             self.chromium_scraper = ChromiumScraper()
             self._initialized = True
+            # 添加hanime1 cloudscraper失败标志
+            self.hanime1_cloudscraper_failed = False
     
     def get_cloud_scraper(self) -> CloudScraper:
         """获取CloudScraper实例"""
@@ -190,6 +192,14 @@ class ScraperManager:
     def get_chromium_scraper(self) -> ChromiumScraper:
         """获取ChromiumScraper实例"""
         return self.chromium_scraper
+    
+    def set_hanime1_cloudscraper_failed(self, failed: bool):
+        """设置hanime1 cloudscraper失败标志"""
+        self.hanime1_cloudscraper_failed = failed
+    
+    def is_hanime1_cloudscraper_failed(self) -> bool:
+        """检查hanime1 cloudscraper是否失败"""
+        return self.hanime1_cloudscraper_failed
     
     def close(self):
         """关闭所有爬虫实例"""

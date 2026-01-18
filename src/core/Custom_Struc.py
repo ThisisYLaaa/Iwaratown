@@ -150,23 +150,10 @@ class stru_hanime1_video:
         try:
             # 根据视频来源选择爬虫策略
             if self.source == "Hanime1":
-                # Hanime1首先尝试使用cloudscraper
-                logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {self.url}")
-                try:
-                    response = scraper_manager.get_cloud_scraper().get_response(self.url, timeout=10)
-                    if response.status_code == 403:
-                        logger.warning(f"cloudscraper返回403，切换到chromium scraper")
-                        # 使用chromium scraper
-                        soup = scraper_manager.get_chromium_scraper().get_soup(
-                        self.url,
-                        10
-                    )
-                    else:
-                        response.raise_for_status()
-                        soup = BeautifulSoup(response.text, "html.parser")
-                except Exception as e:
-                    logger.warning(f"cloudscraper爬取失败: {e}，切换到chromium scraper")
-                    # 使用chromium scraper
+                # 检查hanime1 cloudscraper是否已失败
+                if scraper_manager.is_hanime1_cloudscraper_failed():
+                    logger.info(f"hanime1 cloudscraper已失败，直接使用chromium scraper: {self.url}")
+                    # 直接使用chromium scraper
                     try:
                         soup = scraper_manager.get_chromium_scraper().get_soup(
                             self.url,
@@ -175,6 +162,36 @@ class stru_hanime1_video:
                     except Exception as ce:
                         logger.error(f"chromium scraper爬取失败: {ce}")
                         return False
+                else:
+                    # Hanime1首先尝试使用cloudscraper
+                    logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {self.url}")
+                    try:
+                        response = scraper_manager.get_cloud_scraper().get_response(self.url, timeout=10)
+                        if response.status_code == 403:
+                            logger.warning(f"cloudscraper返回403，切换到chromium scraper")
+                            # 设置cloudscraper失败标志
+                            scraper_manager.set_hanime1_cloudscraper_failed(True)
+                            # 使用chromium scraper
+                            soup = scraper_manager.get_chromium_scraper().get_soup(
+                            self.url,
+                            10
+                        )
+                        else:
+                            response.raise_for_status()
+                            soup = BeautifulSoup(response.text, "html.parser")
+                    except Exception as e:
+                        logger.warning(f"cloudscraper爬取失败: {e}，切换到chromium scraper")
+                        # 设置cloudscraper失败标志
+                        scraper_manager.set_hanime1_cloudscraper_failed(True)
+                        # 使用chromium scraper
+                        try:
+                            soup = scraper_manager.get_chromium_scraper().get_soup(
+                                self.url,
+                                10
+                            )
+                        except Exception as ce:
+                            logger.error(f"chromium scraper爬取失败: {ce}")
+                            return False
             else:
                 # 其他网站直接使用cloudscraper
                 logger.info(f"使用cloudscraper爬取{self.source}: {self.url}")
