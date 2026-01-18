@@ -143,10 +143,13 @@ class Search_Engine:
                 if scraper_manager.is_hanime1_cloudscraper_failed():
                     logger.info(f"hanime1 cloudscraper已失败，直接使用chromium scraper: {get_url}?{urlencode(params)}")
                     # 直接使用chromium scraper
-                    soup: BeautifulSoup = scraper_manager.get_chromium_scraper().get_soup(
+                    # 使用线程专用的Chrome实例
+                    scraper = scraper_manager.get_chromium_scraper()
+                    soup: BeautifulSoup = scraper.get_soup(
                         get_url + "?" + urlencode(params),
                         10
                     )
+
                 else:
                     # Hanime1首先尝试使用cloudscraper
                     logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {get_url}?{urlencode(params)}")
@@ -157,10 +160,13 @@ class Search_Engine:
                             # 设置cloudscraper失败标志
                             scraper_manager.set_hanime1_cloudscraper_failed(True)
                             # 使用chromium scraper
-                            soup= scraper_manager.get_chromium_scraper().get_soup(
+                            # 使用线程专用的Chrome实例
+                            scraper = scraper_manager.get_chromium_scraper()
+                            soup= scraper.get_soup(
                                 get_url + "?" + urlencode(params),
                                 10
                             )
+
                         else:
                             response.raise_for_status()
                             soup = BeautifulSoup(response.text, "html.parser")
@@ -169,10 +175,13 @@ class Search_Engine:
                         # 设置cloudscraper失败标志
                         scraper_manager.set_hanime1_cloudscraper_failed(True)
                         # 使用chromium scraper
-                        soup = scraper_manager.get_chromium_scraper().get_soup(
+                        # 使用线程专用的Chrome实例
+                        scraper = scraper_manager.get_chromium_scraper()
+                        soup = scraper.get_soup(
                             get_url + "?" + urlencode(params),
                             10
                         )
+
                 # 每个视频的div标签
                 current_video_list = soup.find_all("div", class_="video-item-container")
                 if not current_video_list:

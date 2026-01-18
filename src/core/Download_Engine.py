@@ -361,8 +361,6 @@ class Download_Engine:
     @staticmethod
     def hanime1_download(video: stru_hanime1_video) -> bool:
         """下载Hanime1视频"""
-        # 更新日期
-        video._update_updatedAt_from_url()
         download_link: str = ""
 
         try:
@@ -377,10 +375,14 @@ class Download_Engine:
                 logger.info(f"文件已存在，跳过下载: {video.savetitle}")
                 return True
             
+            # 更新视频日期
+            video._update_updatedAt_from_url()
+
+            # 使用线程专用的Chrome实例
+            scraper = scraper_manager.get_chromium_scraper()
+            
             # 获取下载链接
-            download_link = scraper_manager.get_chromium_scraper().get_download_link(
-                video.url
-            )
+            download_link = scraper.get_download_link(video.url)
             
             # 下载视频 yt-dlp
             opts = {
