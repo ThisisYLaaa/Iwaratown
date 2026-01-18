@@ -328,8 +328,6 @@ class Window_CheckUpdate(tb.Toplevel):
             # 关闭窗口
             self.destroy()
 
-
-
 class Window_Favor(tb.Toplevel):
     def __init__(self, master: tb.Window) -> None:
         super().__init__()
