@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-VideoDownloader主程序入口
+Iwaratown主程序入口
 """
 
 import os

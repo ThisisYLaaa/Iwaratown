@@ -1,13 +1,13 @@
-# VideoDownloader 项目目录结构说明
+# Iwaratown 项目目录结构说明
 
 ## 1. 项目概述
 
-VideoDownloader 是一个用于管理和下载网络视频内容的应用程序，支持多种视频平台的搜索和下载功能。
+Iwaratown 是一个用于管理和下载网络视频内容的应用程序，支持多种视频平台的搜索和下载功能。
 
 ## 2. 目录结构
 
 ```
-VideoDownloader/
+Iwaratown/
 ├── src/                  # 源代码目录
 │   ├── config/           # 配置相关模块
 │   ├── core/             # 核心功能模块

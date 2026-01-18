@@ -18,7 +18,7 @@ from ..core.Search_Engine import Search_Engine
 from ..config.Settings_Manager import sm, cm
 from ..utils.Logger import get_logger
 
-logger: logging.Logger = get_logger("⭐VideoDownloader⭐")
+logger: logging.Logger = get_logger("⭐Iwaratown⭐")
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""
@@ -571,7 +571,7 @@ class Window_ShowNew(tb.Toplevel):
 class Win_Main(tb.Window):
     def __init__(self) -> None:
         super().__init__(themename=THEMENAME)
-        self.title("VideoDownloader")
+        self.title("Iwaratown")
         self.geometry("1200x600")
         self.video_list: list[stru_xpv_video|stru_hanime1_video] = []
         self.url_for_edge_to_open: str = ""
