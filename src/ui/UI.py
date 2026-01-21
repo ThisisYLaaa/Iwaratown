@@ -7,18 +7,18 @@ import threading
 from typing import Callable, Optional
 
 import ttkbootstrap as tb
-from ttkbootstrap.dialogs.dialogs import Messagebox
 from tkinter import filedialog as fd
 import tkinter as tk
+from ttkbootstrap.dialogs.dialogs import Messagebox
 
-from core.Custom_Struc import *
-from config.Init_Settings import *
-from core.Iwara_Login import il
-from utils.Logger import get_logger
+from ..config.Init_Settings import *
+from ..core.Channel import channel_manager, Channel
+from ..core.Custom_Struc import *
+from ..core.Search_Engine import Search_Engine
+from ..config.Settings_Manager import sm, cm
+from ..utils.Logger import get_logger
+
 logger: logging.Logger = get_logger("⭐Iwaratown⭐")
-from core.Search_Engine import Search_Engine
-from config.Settings_Manager import sm, cm
-from core.Channel import channel_manager, Channel
 
 class Window_AuthorSelection(tb.Toplevel):
     """A modal window to select an author from a list."""
@@ -328,133 +328,6 @@ class Window_CheckUpdate(tb.Toplevel):
             # 关闭窗口
             self.destroy()
 
-class Window_Login(tb.Toplevel):
-    """登录窗口类，用于用户登录Iwara平台"""
-    def __init__(self, master: tb.Window) -> None:
-        super().__init__()
-        self.master = master
-        self.title("登录Iwara")
-        self.geometry("450x350")
-        self.login_manager = il
-        
-        # 创建并配置界面组件
-        self.create_widgets()
-        
-        # 设置窗口为模态
-        self.transient(self.master)
-        self.grab_set()
-        
-    def create_widgets(self) -> None:
-        """创建登录窗口的UI组件"""
-        # 创建容器框架
-        frame_main = tb.Frame(self, padding=20)
-        frame_main.pack(fill=tk.BOTH, expand=True)
-        
-        # 标题
-        tb.Label(frame_main, text="Iwara 账号登录", font=("Microsoft YaHei", 12, "bold")).pack(pady=10)
-        
-        # 邮箱输入框
-        frame_email = tb.Frame(frame_main)
-        frame_email.pack(fill=tk.X, pady=5)
-        tb.Label(frame_email, text="邮箱:", width=8).pack(side=tk.LEFT)
-        self.entry_email = tb.Entry(frame_email)
-        self.entry_email.pack(fill=tk.X, side=tk.LEFT, expand=True)
-        
-        # 密码输入框
-        frame_password = tb.Frame(frame_main)
-        frame_password.pack(fill=tk.X, pady=5)
-        tb.Label(frame_password, text="密码:", width=8).pack(side=tk.LEFT)
-        self.entry_password = tb.Entry(frame_password, show="*")
-        self.entry_password.pack(fill=tk.X, side=tk.LEFT, expand=True)
-        
-        # 错误提示标签
-        self.label_error = tb.Label(frame_main, text="", foreground="red", wraplength=300)
-        self.label_error.pack(pady=10)
-        
-        # 按钮区域
-        frame_buttons = tb.Frame(frame_main)
-        frame_buttons.pack(pady=10)
-        
-        # 登录按钮
-        self.btn_login = tb.Button(frame_buttons, text="登录", width=12, command=self.on_login)
-        self.btn_login.pack(side=tk.LEFT, padx=5)
-        
-        # 取消按钮
-        self.btn_cancel = tb.Button(frame_buttons, text="取消", width=12, command=self.destroy)
-        self.btn_cancel.pack(side=tk.LEFT, padx=5)
-    
-    def on_login(self) -> None:
-        """处理登录按钮点击事件"""
-        # 获取用户输入
-        email = self.entry_email.get().strip()
-        password = self.entry_password.get().strip()
-        
-        # 简单验证
-        if not email:
-            self.show_error("请输入邮箱")
-            return
-        if not password:
-            self.show_error("请输入密码")
-            return
-            
-        # 验证邮箱格式
-        if not self._is_valid_email(email):
-            self.show_error("请输入有效的邮箱地址")
-            return
-        
-        # 禁用按钮防止重复点击
-        self.btn_login.config(state=tk.DISABLED)
-        self.btn_cancel.config(state=tk.DISABLED)
-        self.label_error.config(text="正在登录...")
-        
-        # 在后台线程中执行登录操作
-        self.update()
-        threading.Thread(target=self._login_thread, args=(email, password)).start()
-    
-    def _login_thread(self, email: str, password: str) -> None:
-        """登录操作的后台线程"""
-        # 执行登录
-        success, message, token = self.login_manager.login(email, password)
-        
-        # 在主线程中更新UI
-        self.after(0, lambda: self._handle_login_result(success, message, token))
-    
-    def _handle_login_result(self, success: bool, message: str, token: str) -> None:
-        """处理登录结果"""
-        # 重新启用按钮
-        self.btn_login.config(state=tk.NORMAL)
-        self.btn_cancel.config(state=tk.NORMAL)
-        
-        if success:
-            # 登录成功，保存token到设置中
-            sm.settings["Iwara_Token"] = token
-            sm.save_settings()
-            
-            # 更新UI状态，显示登录成功信息
-            self.label_error.config(text="登录成功！", foreground="green")
-            logger.info(f"用户登录成功")
-            
-            # 更新主窗口的登录按钮文本
-            if isinstance(self.master, Win_Main):
-                self.master.update_login_status(True)
-            
-            # 延迟关闭窗口
-            self.after(1000, self.destroy)
-        else:
-            # 登录失败，显示错误信息
-            logger.error(f"登录失败: {message}")
-            self.show_error(message)
-    
-    def show_error(self, message: str) -> None:
-        """显示错误信息"""
-        self.label_error.config(text=message, foreground="red")
-    
-    @staticmethod
-    def _is_valid_email(email: str) -> bool:
-        """验证邮箱格式"""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return re.match(pattern, email) is not None
-
 class Window_Favor(tb.Toplevel):
     def __init__(self, master: tb.Window) -> None:
         super().__init__()
@@ -700,11 +573,11 @@ class Win_Main(tb.Window):
         super().__init__(themename=THEMENAME)
         self.title("Iwaratown")
         self.geometry("1200x600")
-        self.video_list: list[stru_iw_video|stru_xpv_video|stru_hanime1_video] = []
+        self.video_list: list[stru_xpv_video|stru_hanime1_video] = []
         self.url_for_edge_to_open: str = ""
         self.current_author: str = ""
 
-        self.download_queue: queue.Queue[stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video] = queue.Queue()
+        self.download_queue: queue.Queue[stru_xpv_video|stru_xpv_custom|stru_hanime1_video] = queue.Queue()
         self.download_threads: list[threading.Thread] = []
 
         self.col_map: dict[str, str] = {
@@ -729,7 +602,7 @@ class Win_Main(tb.Window):
         logger.debug(f"下载线程启动: {threading.current_thread().name}")
         while True:
             #这里的get会自动断点
-            task: stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video = self.download_queue.get()
+            task: stru_xpv_video|stru_xpv_custom|stru_hanime1_video = self.download_queue.get()
             logger.info(f"队列还剩下{self.download_queue.qsize()}个任务")
             
             # 使用渠道管理器下载任务
@@ -753,12 +626,7 @@ class Win_Main(tb.Window):
             logger.debug("打开收藏夹窗口"),
             threading.Thread(target=Window_Favor, args=(self,), daemon=True).start()
         ]).pack(side='left', padx=5)
-        # 登录按钮
-        self.btn_login = tb.Button(frame_toolbar, text="登录", command=self.on_login_button_click)
-        self.btn_login.pack(side='left', padx=5)
-        
-        # 检查是否已登录并更新按钮状态
-        self.update_login_status(bool(sm.settings.get("Iwara_Token", "")))
+
         self.btn_local = tb.Button(frame_toolbar, text="本地文件", state=tk.DISABLED, command=lambda: [
             logger.debug("打开本地文件夹"),
             self.open_local_folder()
@@ -908,33 +776,7 @@ class Win_Main(tb.Window):
             os.startfile(download_path)
         except Exception as e:
             logger.error(f"打开本地文件夹失败: {e}")
-    
-    def on_login_button_click(self) -> None:
-        # 检查当前是否已登录
-        if sm.settings.get("Iwara_Token", ""):
-            # 显示确认对话框
-            if Messagebox.yesno("您已登录，是否要退出登录？", "确认") == '确认':
-                del sm.settings["Iwara_Token"]
-                sm.save_settings()
-                self.update_login_status(False)
-                Messagebox.show_info("已成功退出登录", "提示", parent=self)
-        else:
-            # 显示登录窗口
-            threading.Thread(target=Window_Login, args=(self,), daemon=True).start()
 
-    def update_login_status(self, is_logged_in: bool) -> None:
-        """更新登录按钮的显示状态"""
-        if is_logged_in:
-            self.btn_login.config(text="已登录")
-            # ttkbootstrap中设置按钮背景色的方法
-            self.btn_login.configure(bootstyle="success")
-        else:
-            self.btn_login.config(text="登录")
-            # 重置按钮样式为默认值
-            self.btn_login.configure(bootstyle="primary")
-        
-        logger.info(f"更新登录状态: {'已登录' if is_logged_in else '未登录'}")
-    
     def start_search(self) -> None:
         keyword: str = self.entry_search.get().strip()
         source: str = self.combobox_source.get()
@@ -950,44 +792,7 @@ class Win_Main(tb.Window):
     def _perform_search(self, keyword: str, source: str) -> None:
         """Executes the search operation in a background thread."""
         try:
-            if source == "Iwara":
-                # Iwara搜索需要特殊处理，因为需要先搜索作者
-                authors: list[stru_iw_author] = Search_Engine.iw_search_author(keyword)
-                if not authors:
-                    self.after(0, lambda: Messagebox.show_info("未找到相关作者", "提示"))
-                    return
-                
-                if len(authors) == 1:
-                    self.selected_author: str = authors[0].username
-                    logger.info(f"仅找到一位作者: {self.selected_author}")
-                    self.video_list = Search_Engine.iw_search_video(authors[0].id)  # pyright: ignore[reportAttributeAccessIssue]
-                    self.url_for_edge_to_open = f"{sm.settings.get('Iwara_Hostname', DEFAULT_SETTINGS['Iwara_Hostname'])}/profile/{self.selected_author}/videos"
-                    self.after(0, lambda: self.btn_edge.configure(state=tk.NORMAL))
-                    self.after(0, lambda: self.btn_local.configure(state=tk.NORMAL))
-                else:
-                    author_names: list[str] = [author.username for author in authors]
-                    author_selected_event: threading.Event = threading.Event()
-                    self.after(0, self.prompt_for_author, author_names, author_selected_event)
-                    author_selected_event.wait()
-
-                    if self.selected_author:
-                        logger.info(f"用户选择了作者: {self.selected_author}")
-                        # 找到对应作者的id
-                        selected_author_id: str = ""
-                        for author in authors:
-                            if author.username == self.selected_author:
-                                selected_author_id = author.id
-                                break
-                        if selected_author_id:
-                            self.video_list = Search_Engine.iw_search_video(selected_author_id)  # pyright: ignore[reportAttributeAccessIssue]
-                            self.url_for_edge_to_open = f"{sm.settings.get('Iwara_Hostname', DEFAULT_SETTINGS['Iwara_Hostname'])}/profile/{self.selected_author}/videos"
-                        else:
-                            logger.warning("未找到所选作者的ID")
-                            self.video_list = []
-                    else:
-                        logger.info("用户取消了作者选择")
-                        self.video_list = []
-            elif source in channel_manager.list_channels():
+            if source in channel_manager.list_channels():
                 # 使用渠道管理器进行搜索
                 self.video_list = channel_manager.search(keyword, source)
                 if not self.video_list:
@@ -1027,7 +832,7 @@ class Win_Main(tb.Window):
 
         logger.info(f"开始下载 {len(selected_items)} 个视频到: {download_path} ")
         for i, item_id in enumerate(selected_items):
-            video_data: stru_iw_video|stru_xpv_video|stru_hanime1_video = self.video_list[selected_videos_indices[i]]
+            video_data: stru_xpv_video|stru_hanime1_video = self.video_list[selected_videos_indices[i]]
             self.download_queue.put(video_data)
 
     def start_download_custom(self) -> None:

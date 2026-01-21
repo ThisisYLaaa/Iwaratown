@@ -1,9 +1,8 @@
 import json
 import logging
 
-from core.Custom_Struc import *
 from .Init_Settings import *
-from utils.Logger import get_logger
+from ..utils.Logger import get_logger
 
 logger: logging.Logger = get_logger("设置")
 
@@ -34,10 +33,6 @@ class Settings_Manager:
                 if key not in self.settings:
                     self.settings[key] = default_value
             
-            # 确保Iwara_Token字段存在
-            if "Iwara_Token" not in self.settings:
-                self.settings["Iwara_Token"] = None
-                
             logger.info("设置加载成功")
             return
         except FileNotFoundError:
@@ -47,7 +42,6 @@ class Settings_Manager:
         except Exception as e:
             logger.error(f"加载设置时发生未知错误: {e}")
         self.settings = DEFAULT_SETTINGS.copy()
-        self.settings["Iwara_Token"] = None
         logger.info("使用默认设置")
         self.save_settings()
     
@@ -58,8 +52,6 @@ class Settings_Manager:
             # 去掉最后一个/
             if self.settings.get("Xpv_Hostname", "").endswith('/'):
                 self.settings["Xpv_Hostname"] = self.settings["Xpv_Hostname"][:-1]
-            if self.settings.get("Iwara_Hostname", "").endswith('/'):
-                self.settings["Iwara_Hostname"] = self.settings["Iwara_Hostname"][:-1]
             if self.settings.get("Hanime1_Hostname", "").endswith('/'):
                 self.settings["Hanime1_Hostname"] = self.settings["Hanime1_Hostname"][:-1]
             
@@ -72,33 +64,6 @@ class Settings_Manager:
             logger.error(f"保存设置时IO错误: {e}")
         except Exception as e:
             logger.error(f"保存设置时发生未知错误: {e}")
-            
-    def get_iwara_token(self) -> str:
-        """获取Iwara登录token
-        
-        Returns:
-            str: 存储的token，如果没有则返回None
-        """
-        return self.settings.get("Iwara_Token", "")
-    
-    def set_iwara_token(self, token: str) -> None:
-        """设置Iwara登录token
-        
-        Args:
-            token: 要存储的token，设置为None可清除token
-        """
-        self.settings["Iwara_Token"] = token
-        logger.info(f"已{'保存' if token else '清除'}Iwara登录token")
-        self.save_settings()
-    
-    def has_valid_token(self) -> bool:
-        """检查是否有有效的token
-        
-        Returns:
-            bool: 如果token存在且不为空，返回True，否则返回False
-        """
-        token = self.get_iwara_token()
-        return token is not None and token.strip() != ""
 
 class Cache_Manager:
     _Cache_Manager_instance = None

@@ -1,78 +1,16 @@
-import datetime, os, re
-from typing import Any
+import datetime
+import os
+import re
+from typing import Any, cast
+
 from bs4 import BeautifulSoup
 
-from utils.CScraper import chrome_scraper
+from ..config.Init_Settings import *
+from ..config.Settings_Manager import sm, cm
+from ..utils.CScraper import scraper_manager
+from ..utils.Logger import get_logger
 
-from utils.Logger import get_logger
-logger = get_logger("视频")
-
-from config.Init_Settings import *
-from config.Settings_Manager import sm, cm
-
-class stru_iw_author:
-    def __init__(self, data: dict):
-        self.id: str = data.get("id", "")
-        self.name: str = data.get("name", "Unknown").strip()
-        self.username: str = data.get("username", "Unknown").strip()
-        self.status: str = data.get("status", "active").strip()
-        self.role: str = data.get("role", "user").strip()
-        self.followedBy: bool = data.get("followedBy", False)
-        self.following: bool = data.get("following", False)
-        self.friend: bool = data.get("friend", False)
-        self.premium: bool = data.get("premium", False)
-        self.creatorProgram: bool = data.get("creatorProgram", False)
-        self.seenAt: str = data.get("seenAt", "").strip()
-        self.avatar: dict = data.get("avatar", {})
-        self.createdAt: str = data.get("createdAt", "").strip()
-
-    def get_avatar_url(self) -> str:
-        return f"https://www.iwara.tv/profile/{self.username}/videos"
-
-class stru_iw_video:
-    def __init__(self, data: dict):
-        # 无关紧要
-        self.status: str = data.get("status", "active").strip()
-        self.rating: str = data.get("rating", "ecchi").strip()
-        self.liked: bool = data.get("liked", False)
-        self.numLikes: int = data.get("numLikes", 0)
-        self.file: dict = data.get("file", {})
-        self.user: stru_iw_author = stru_iw_author(data.get("user", {}))
-        self.createdAt: str = data.get("createdAt", "").strip()
-
-        # iwara必须
-        self.id: str = data.get("id", "")
-
-        # 频道必须
-        # self.furl: str = ""  Iwara不需要furl
-        self.source: str = "Iwara"
-        self.url: str = self.get_video_path_url()
-        self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
-        self.updatedAt: str = data.get("updatedAt", "").strip()
-        self.savetitle: str = "".join([f"[{datetime.datetime.fromisoformat(self.createdAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")}]", data.get("title", "").strip()])
-        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
-        self.author: str = self.user.username
-        self.numViews: int = data.get("numViews", 0)
-        self.dpath: str = sm.settings.get("Iwara_Download_Path", DEFAULT_SETTINGS["Iwara_Download_Path"])
-        self.dpath = os.path.join(self.dpath, self.author)
-
-    def get_video_path_url(self) -> str:
-        return f"https://www.iwara.tv/video/{self.id}"
-    
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.__dict__.get(key, default)
-    
-    def get_updatedAt_timestamp(self) -> float:
-        """将YYYY-MM-DD格式的日期转换为时间戳"""
-        try:
-            if self.updatedAt:
-                return datetime.datetime.strptime(self.updatedAt, "%Y-%m-%d").timestamp()
-            else:
-                # 如果没有日期，返回一个较早的时间戳
-                return 0.0
-        except ValueError:
-            # 如果日期格式不正确，返回一个较早的时间戳
-            return 0.0
+logger = get_logger("Custom_Struc")
 
 class stru_xpv_video:
     def __init__(self, data: dict):
@@ -80,11 +18,11 @@ class stru_xpv_video:
         self.furl: str = data.get("furl", "").strip()
         self.source: str = "Xpv"
         self.url: str = f"{sm.settings['Xpv_Hostname']}{data.get('url', '')}"
-        self.title: str = re.sub(r'[\\/*?:"<>|]', "_", data.get("title", "").strip())
+        self.title: str = re.sub(r'[\/*?:"<>|]', "_", data.get("title", "").strip())
         self.updatedAt: str = data.get("updatedAt", "").strip()
         self.updatedAt = datetime.datetime.fromisoformat(self.updatedAt.replace("Z", "+00:00")).strftime("%Y-%m-%d")
         self.savetitle: str = "".join([f"[{self.updatedAt}]", data.get("title", "").strip()])
-        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
+        self.savetitle = re.sub(r'[\/*?:"<>|]', "_", self.savetitle)
         self.author: str = data.get("author", "").strip()
         self.numViews: int = data.get("numViews", 0)
         self.dpath: str = sm.settings.get("Xpv_Download_Path", DEFAULT_SETTINGS["Xpv_Download_Path"])
@@ -121,7 +59,7 @@ class stru_hanime1_video:
         self.source: str = "Hanime1"
         self.url: str = data.get("url", "").strip()
         self.title: str = data.get("title", "").strip()
-        self.title = re.sub(r'[\\/*?:"<>|]', "_", self.title)
+        self.title = re.sub(r'[\/*?:"<>|]', "_", self.title)
         self.updatedAt: str = ""  # 一般没有
         self.savetitle: str = ""  # 一般没有
         self.author: str = data.get("author", "").strip()
@@ -168,7 +106,7 @@ class stru_hanime1_video:
 
         self.updatedAt = updatedAt
         self.savetitle = f"[{updatedAt}]{self.title}"
-        self.savetitle = re.sub(r'[\\/*?:"<>|]', "_", self.savetitle)
+        self.savetitle = re.sub(r'[\/*?:"<>|]', "_", self.savetitle)
     
     def _rename_video_file(self) -> None:
         """重命名视频文件，支持多种旧文件名格式"""
@@ -208,26 +146,113 @@ class stru_hanime1_video:
             return True
         
         try:
-            # 解析视频信息
-            soup: BeautifulSoup = chrome_scraper.get(
-                url=self.url,
-                target_ele="main-nav-video-show hidden-xs"
-            )
-            div_info = soup.find("div", class_="video-details-wrapper hidden-sm hidden-md hidden-lg hidden-xl")
-            if not div_info:
-                logger.error(f"无法解析视频信息: {self.url}")
-                return False
+            # 定义日期信息提取函数，减少重复代码
+            def extract_date_from_chromium() -> str:
+                # 获取唯一的Chrome实例
+                main_page = scraper_manager.get_main_chromium_page()
+                
+                # 新建标签页
+                logger.info(f"新建标签页，访问: {self.url}")
+                new_tab = main_page.new_tab()
+                
+                try:
+                    # 在新标签页中访问网页
+                    new_tab.get(self.url)
+                    
+                    # 等待视频详情元素出现 - 使用更可靠的选择器，避免hidden类影响
+                    # 选择器说明：.video-details-wrapper是包含视频详情的容器，不使用hidden-*类以提高兼容性
+                    logger.info("等待元素 .video-details-wrapper 出现")
+                    # 使用tag:div@@class:video-details-wrapper语法，模糊匹配class包含video-details-wrapper的div元素
+                    video_details_selector = "tag:div@@class:video-details-wrapper"
+                    new_tab.wait.ele_displayed(video_details_selector, timeout=10)
+                    
+                    # 提取日期信息 - 直接在视频详情容器内查找包含日期的元素
+                    div_info = new_tab.ele(video_details_selector)
+                    div_text: str = cast(str, div_info.text)
+                    return self._extract_date_from_filename(div_text)
+                finally:
+                    # 确保标签页被关闭
+                    tabs = main_page.get_tabs()
+                    if len(tabs) > 1:
+                        logger.info("关闭标签页")
+                        try:
+                            new_tab.close()
+                        except:
+                            pass
             
-            date = self._extract_date_from_filename(div_info.text)
-            if date:
-                self._update_savetitle(date)
-                self._rename_video_file()
-                return True
+            # 检查cloudscraper是否已失败
+            if scraper_manager.is_cs_failed():
+                logger.info(f"cloudscraper已失败，直接使用dissionpage: {self.url}")
+                # 直接使用dissionpage
+                date = extract_date_from_chromium()
+                if date:
+                    self._update_savetitle(date)
+                    self._rename_video_file()
+                    return True
+                return False
+            else:
+                # Hanime1首先尝试使用cloudscraper
+                logger.info(f"首先尝试使用cloudscraper爬取Hanime1: {self.url}")
+                try:
+                    response = scraper_manager.get_cloud_scraper().get_response(self.url, timeout=10)
+                    if response.status_code == 403:
+                        logger.warning(f"cloudscraper返回403，切换到dissionpage")
+                        # 设置cloudscraper失败标志
+                        scraper_manager.set_cs_failed(True)
+                        # 使用dissionpage
+                        date = extract_date_from_chromium()
+                        if date:
+                            self._update_savetitle(date)
+                            self._rename_video_file()
+                            return True
+                        return False
+                    else:
+                        response.raise_for_status()
+                        # 使用cloudscraper返回的内容解析
+                        soup = BeautifulSoup(response.text, "html.parser")
+                        # 使用更可靠的选择器，模糊匹配class包含video-details-wrapper的div元素
+                        div_info = soup.select_one("div.video-details-wrapper")
+                        if div_info:
+                            date = self._extract_date_from_filename(div_info.text)
+                            if date:
+                                self._update_savetitle(date)
+                                self._rename_video_file()
+                                return True
+                except Exception as e:
+                    logger.warning(f"cloudscraper爬取失败: {e}")
+                    # 非403错误，继续使用cloudscraper，不切换
+                    # 使用dissionpage作为备选方案
+                    date = extract_date_from_chromium()
+                    if date:
+                        self._update_savetitle(date)
+                        self._rename_video_file()
+                        return True
+                    return False
             
         except Exception as e:
             logger.error(f"访问视频页面失败 {self.url}: {e}")
         
         return False
+    
+    def update_date_from_chromium_tab(self, tab) -> bool:
+        """从Chromium标签页中更新日期信息"""
+        try:
+            # 等待视频详情元素出现 - 使用更可靠的选择器，避免hidden类影响
+            logger.info("等待元素 .video-details-wrapper 出现")
+            # 使用tag:div@@class:video-details-wrapper语法，模糊匹配class包含video-details-wrapper的div元素
+            video_details_selector = "tag:div@@class:video-details-wrapper"
+            tab.wait.ele_displayed(video_details_selector, timeout=10)
+            
+            # 提取日期信息 - 直接在视频详情容器内查找包含日期的元素
+            div_info = tab.ele(video_details_selector)
+            date = self._extract_date_from_filename(div_info.text)
+            if date:
+                self._update_savetitle(date)
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"从标签页提取日期失败: {e}")
+            return False
     
     def get_updatedAt_timestamp(self) -> float:
         """将YYYY-MM-DD格式的日期转换为时间戳"""

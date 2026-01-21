@@ -10,12 +10,8 @@ MYBILIURL: str = "https://space.bilibili.com/616045770"
 MAX_PAGE: int = 20
 Miao: bool = True
 
-# 这个后缀是固定的 未来可能会改变
-IWARA_SHA_POSTFIX: str = "_5nFp9kmbNnHdAFhaqMvt"
-
 DEFAULT_HEADERS: dict = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-    # Iwara不可以用Accept-Encoding
 }
 
 CHANNELS_CONFIG = {
@@ -24,14 +20,6 @@ CHANNELS_CONFIG = {
         "download_path_key": "Xpv_Download_Path",
         "default_hostname": "https://www.xpicvid.com",
         "default_download_path": os.path.join(os.path.expanduser("~"), "Xpv_Downloads")
-    },
-    "Iwara": {
-        "hostname_key": "Iwara_Hostname",
-        "download_path_key": "Iwara_Download_Path",
-        "api_hostname_key": "Iwara_API_Hostname",
-        "default_hostname": "https://www.iwara.tv",
-        "default_api_hostname": "https://api.iwara.tv",
-        "default_download_path": os.path.join(os.path.expanduser("~"), "Iwara_Downloads")
     },
     "Hanime1": {
         "hostname_key": "Hanime1_Hostname",
@@ -46,6 +34,13 @@ PROXIES: dict = {
     "https": "http://127.0.0.1:7897"
 }
 
+# Hanime1 元素检测配置
+HANIME1_ELEMENTS = {
+    "SEARCH_RESULTS": "horizontal-row",
+    "DOWNLOAD_BUTTON": "downloadBtn",
+    "DOWNLOAD_LINK": "exoclick-popunder juicyads-popunder"
+}
+
 # 需要在UI.py/_download_worker中对应值和方法
 XPV_CUSTOM_MAP: dict = {
     "moeupup": "pic",
@@ -58,7 +53,6 @@ DEFAULT_SETTINGS: dict = {
     "Xpv_Pic_Download_RelativePath": "#Pics",
     "Favor": {
         "xpv": [],
-        "iwara": [],
         "hanime1": [],
     },
     "Custom_Download_Path": os.path.join(os.path.expanduser("~"), "Custom_Downloads"),
@@ -70,5 +64,3 @@ DEFAULT_SETTINGS: dict = {
 for channel_name, config in CHANNELS_CONFIG.items():
     DEFAULT_SETTINGS[config["hostname_key"]] = config["default_hostname"]
     DEFAULT_SETTINGS[config["download_path_key"]] = config["default_download_path"]
-    if "api_hostname_key" in config:
-        DEFAULT_SETTINGS[config["api_hostname_key"]] = config["default_api_hostname"]

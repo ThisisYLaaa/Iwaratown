@@ -1,10 +1,11 @@
-from typing import Callable, Dict, List, Any, Optional
 import logging
 import os
+from typing import Any, Callable, Dict, List, Optional
 
-from core.Custom_Struc import *
-from config.Settings_Manager import sm, cm
-from utils.Logger import get_logger
+from ..config.Settings_Manager import sm, cm
+from ..core.Custom_Struc import *
+from ..utils.Logger import get_logger
+
 logger: logging.Logger = get_logger("渠道管理")
 
 class Channel:
@@ -12,7 +13,7 @@ class Channel:
     
     def __init__(self, name: str, hostname_key: str, download_path_key: str,
                  search_method: Callable, download_methods: Dict[str, Callable],
-                 video_struc: type[stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video]):
+                 video_struc: type[stru_xpv_video|stru_xpv_custom|stru_hanime1_video]):
         """初始化渠道
         
         Args:
@@ -127,7 +128,7 @@ class ChannelManager:
         """
         return list(self.channels.keys())
     
-    def download(self, task: stru_iw_video|stru_xpv_video|stru_xpv_custom|stru_hanime1_video) -> bool:
+    def download(self, task: stru_xpv_video|stru_xpv_custom|stru_hanime1_video) -> bool:
         """下载任务，自动选择合适的渠道
         
         Args:
