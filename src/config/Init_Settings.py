@@ -36,9 +36,9 @@ PROXIES: dict = {
 
 # Hanime1 元素检测配置
 HANIME1_ELEMENTS = {
-    "SEARCH_RESULTS": ".horizontal-row",
-    "DOWNLOAD_BUTTON": "#downloadBtn",
-    "DOWNLOAD_LINK": ".exoclick-popunder juicyads-popunder"
+    "SEARCH_RESULTS": "horizontal-row",
+    "DOWNLOAD_BUTTON": "downloadBtn",
+    "DOWNLOAD_LINK": "exoclick-popunder juicyads-popunder"
 }
 
 # 需要在UI.py/_download_worker中对应值和方法

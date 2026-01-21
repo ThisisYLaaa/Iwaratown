@@ -180,10 +180,10 @@ class stru_hanime1_video:
                         except:
                             pass
             
-            # 检查hanime1 cloudscraper是否已失败
-            if scraper_manager.is_hanime1_cloudscraper_failed():
-                logger.info(f"hanime1 cloudscraper已失败，直接使用chromium scraper: {self.url}")
-                # 直接使用chromium scraper
+            # 检查cloudscraper是否已失败
+            if scraper_manager.is_cs_failed():
+                logger.info(f"cloudscraper已失败，直接使用dissionpage: {self.url}")
+                # 直接使用dissionpage
                 date = extract_date_from_chromium()
                 if date:
                     self._update_savetitle(date)
@@ -196,10 +196,10 @@ class stru_hanime1_video:
                 try:
                     response = scraper_manager.get_cloud_scraper().get_response(self.url, timeout=10)
                     if response.status_code == 403:
-                        logger.warning(f"cloudscraper返回403，切换到chromium scraper")
+                        logger.warning(f"cloudscraper返回403，切换到dissionpage")
                         # 设置cloudscraper失败标志
-                        scraper_manager.set_hanime1_cloudscraper_failed(True)
-                        # 使用chromium scraper
+                        scraper_manager.set_cs_failed(True)
+                        # 使用dissionpage
                         date = extract_date_from_chromium()
                         if date:
                             self._update_savetitle(date)
@@ -219,10 +219,9 @@ class stru_hanime1_video:
                                 self._rename_video_file()
                                 return True
                 except Exception as e:
-                    logger.warning(f"cloudscraper爬取失败: {e}，切换到chromium scraper")
-                    # 设置cloudscraper失败标志
-                    scraper_manager.set_hanime1_cloudscraper_failed(True)
-                    # 使用chromium scraper
+                    logger.warning(f"cloudscraper爬取失败: {e}")
+                    # 非403错误，继续使用cloudscraper，不切换
+                    # 使用dissionpage作为备选方案
                     date = extract_date_from_chromium()
                     if date:
                         self._update_savetitle(date)

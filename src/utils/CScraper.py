@@ -79,51 +79,44 @@ class ChromiumScraper:
         Returns:
             下载链接字符串
         """
-        max_retries = 2
-        for retry in range(max_retries):
-            try:
-                # 获取唯一的Chrome实例
-                main_page = scraper_manager.get_main_chromium_page()
-                
-                # 新建标签页
-                logger.info(f"新建标签页，获取下载链接: {video.url}")
-                new_tab = main_page.new_tab()
-                
-                try:
-                    # 在新标签页中访问网页
-                    new_tab.get(video.url)
+        # 获取唯一的Chrome实例
+        main_page = scraper_manager.get_main_chromium_page()
+        
+        # 新建标签页
+        logger.info(f"新建标签页，获取下载链接: {video.url}")
+        new_tab = main_page.new_tab()
+        
+        try:
+            # 在新标签页中访问网页
+            new_tab.get(video.url)
 
-                    logger.info("等待下载引导页面出现")
-                    new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"], timeout=timeout)
-                    download_guide_link: str = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"]).attr("href"))
-                    
-                    new_tab.get(download_guide_link)
-                    logger.info("等待下载链接出现")
-                    new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_LINK"], timeout=timeout)
-                    download_link: str = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_LINK"]).attr("data-url"))
-                    
-                    # 获取标签页数量
-                    tabs = main_page.get_tabs()
-                    
-                    # 如果标签页数量大于1，关闭当前标签页
-                    if len(tabs) > 1:
-                        logger.info("关闭标签页")
-                        new_tab.close()
-                    
-                    return download_link
-                except Exception as e:
-                    # 确保标签页被关闭
-                    tabs = main_page.get_tabs()
-                    if len(tabs) > 1:
-                        try:
-                            new_tab.close()
-                        except:
-                            pass
-                    raise e
-            except Exception as e:
-                logger.warning(f"ChromiumScraper.get_download_link失败: {e}，正在重试 ({retry + 1}/{max_retries})")
-        # 重试次数用完，抛出异常
-        raise Exception(f"ChromiumScraper.get_download_link多次尝试失败: {video.url}")
+            logger.info("等待下载引导页面出现")
+            new_tab.wait.ele_displayed(f"#{HANIME1_ELEMENTS['DOWNLOAD_BUTTON']}", timeout=timeout)
+            download_guide_link: str = str(new_tab.ele(f"#{HANIME1_ELEMENTS['DOWNLOAD_BUTTON']}").attr("href"))
+            
+            new_tab.get(download_guide_link)
+            logger.info("等待下载链接出现")
+            new_tab.wait.ele_displayed(f".{HANIME1_ELEMENTS['DOWNLOAD_LINK']}", timeout=timeout)
+            download_link: str = str(new_tab.ele(f".{HANIME1_ELEMENTS['DOWNLOAD_LINK']}").attr("data-url"))
+            
+            # 获取标签页数量
+            tabs = main_page.get_tabs()
+            
+            # 如果标签页数量大于1，关闭当前标签页
+            if len(tabs) > 1:
+                logger.info("关闭标签页")
+                new_tab.close()
+            
+            return download_link
+        except Exception as e:
+            # 确保标签页被关闭
+            tabs = main_page.get_tabs()
+            if len(tabs) > 1:
+                try:
+                    new_tab.close()
+                except:
+                    pass
+            raise e
 
  
 class ScraperManager:
@@ -145,15 +138,11 @@ class ScraperManager:
             logger.info("创建新的ScraperManager实例")
             self.cloud_scraper = CloudScraper()
             
-            # 创建唯一的Chrome实例
-            logger.info("创建唯一的Chrome实例")
-            co = ChromiumOptions().auto_port()
-            co.incognito(True)
-            self.chromium_page = ChromiumPage(co)
-            self.chromium_page.set.window.size(600, 300)
+            # 初始化chromium_page为None，延迟创建
+            self.chromium_page: ChromiumPage = None  # pyright: ignore[reportAttributeAccessIssue]
             
-            # 添加hanime1 cloudscraper失败标志
-            self.hanime1_cloudscraper_failed = False
+            # 添加cloudscraper失败标志，简化命名
+            self.cs_failed = False
             self._initialized = True
     
     def get_cloud_scraper(self) -> CloudScraper:
@@ -161,7 +150,33 @@ class ScraperManager:
         return self.cloud_scraper
     
     def get_main_chromium_page(self):
-        """获取唯一的Chrome浏览器实例"""
+        """获取唯一的Chrome浏览器实例，添加了延迟初始化和连接检查"""
+        # 延迟初始化ChromiumPage
+        if self.chromium_page is None:
+            logger.info("初始化dissionpage")
+            co = ChromiumOptions().auto_port()
+            co.incognito(True)
+            self.chromium_page = ChromiumPage(co)
+            self.chromium_page.set.window.size(600, 300)
+        else:
+            # 检查ChromiumPage连接状态
+            try:
+                # 尝试访问浏览器属性，检查连接是否正常
+                self.chromium_page.get_tabs()
+            except Exception as e:
+                logger.warning(f"检测到Chrome连接断开: {e}，重新创建实例")
+                # 连接断开，重新创建ChromiumPage实例
+                try:
+                    # 先尝试关闭旧实例
+                    self.chromium_page.close()
+                except:
+                    pass
+                # 创建新实例
+                logger.info("重新初始化dissionpage")
+                co = ChromiumOptions().auto_port()
+                co.incognito(True)
+                self.chromium_page = ChromiumPage(co)
+                self.chromium_page.set.window.size(600, 300)
         return self.chromium_page
     
     def create_chromium_scraper(self) -> ChromiumScraper:
@@ -173,19 +188,70 @@ class ScraperManager:
         """获取ChromiumScraper实例（兼容旧代码）"""
         return self.create_chromium_scraper()
     
-    def set_hanime1_cloudscraper_failed(self, failed: bool):
-        """设置hanime1 cloudscraper失败标志"""
-        self.hanime1_cloudscraper_failed = failed
+    def set_cs_failed(self, failed: bool):
+        """设置cloudscraper失败标志"""
+        self.cs_failed = failed
     
-    def is_hanime1_cloudscraper_failed(self) -> bool:
-        """检查hanime1 cloudscraper是否失败"""
-        return self.hanime1_cloudscraper_failed
+    def is_cs_failed(self) -> bool:
+        """检查cloudscraper是否失败"""
+        return self.cs_failed
+    
+    def get_page_html(self, url: str) -> str:
+        """获取页面HTML，自动处理cloudscraper和dissionpage的切换逻辑
+        
+        Args:
+            url: 要获取的页面URL
+            
+        Returns:
+            页面的HTML内容
+        """
+        if not self.cs_failed:
+            try:
+                logger.info(f"尝试使用cloudscraper获取页面: {url}")
+                response = self.cloud_scraper.get_response(url, timeout=10)
+                if response.status_code == 403:
+                    logger.warning("cloudscraper返回403，切换到dissionpage")
+                    self.cs_failed = True
+                else:
+                    response.raise_for_status()
+                    return response.text
+            except Exception as e:
+                logger.warning(f"cloudscraper获取页面失败: {e}")
+                # 非403错误，继续使用cloudscraper，不切换
+                raise
+        
+        # 使用dissionpage获取HTML
+        logger.info(f"使用dissionpage获取页面: {url}")
+        main_page = self.get_main_chromium_page()
+        
+        # 新建标签页
+        new_tab = main_page.new_tab()
+        
+        try:
+            # 在新标签页中访问网页
+            new_tab.get(url)
+            
+            # 等待页面加载完成
+            new_tab.wait.ele_displayed(f".{HANIME1_ELEMENTS['SEARCH_RESULTS']}", timeout=10)
+            
+            # 获取页面HTML
+            html = new_tab.html
+            return html
+        finally:
+            # 确保标签页被关闭
+            tabs = main_page.get_tabs()
+            if len(tabs) > 1:
+                logger.info("关闭标签页")
+                try:
+                    new_tab.close()
+                except:
+                    pass
     
     def close(self):
         """关闭所有爬虫实例"""
         logger.info("关闭所有爬虫实例")
         # 关闭唯一的Chrome实例
-        if hasattr(self, 'chromium_page'):
+        if hasattr(self, 'chromium_page') and self.chromium_page is not None:
             try:
                 logger.info("关闭唯一的Chrome实例")
                 self.chromium_page.close()

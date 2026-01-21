@@ -360,76 +360,90 @@ class Download_Engine:
     
     @staticmethod
     def hanime1_download(video: stru_hanime1_video) -> bool:
-        """下载Hanime1视频"""
+        """下载Hanime1视频，优先使用yt_dlp"""
         download_link: str = ""
-
-        save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
-        if os.path.exists(save_path):
-            logger.info(f"文件已存在，跳过下载: {video.savetitle}")
-            return True
-
         try:
-            # 检查目录是否存在
+            # 1. 更新视频日期信息
+            logger.info(f"更新视频日期信息: {video.url}")
+            video._update_updatedAt_from_url()
+            
+            # 2. 检查并创建目标目录
             os.makedirs(video.dpath, exist_ok=True)
-
-            # 获取唯一的Chrome实例
-            main_page = scraper_manager.get_main_chromium_page()
             
-            # 新建标签页
-            logger.info(f"新建标签页，访问视频页面: {video.url}")
-            new_tab = main_page.new_tab()
+            # 3. 构建保存路径并检查文件是否已存在
+            save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
+            if os.path.exists(save_path):
+                logger.info(f"文件已存在，跳过下载: {video.savetitle}")
+                return True
             
-            try:
-                # 在新标签页中访问网页
-                new_tab.get(video.url)
+            # 4. 根据cloudscraper状态选择下载策略
+            if not scraper_manager.is_cs_failed():
+                # cloudscraper可用，直接使用yt_dlp下载
+                logger.info(f"cloudscraper可用，使用yt_dlp直接下载: {video.url}")
                 
-                # 如果没有savetitle，先更新日期
-                if not video.savetitle:
-                    logger.info("更新视频日期信息")
-                    video.update_date_from_chromium_tab(new_tab)
+                # 配置yt_dlp参数
+                ydl_opts = {
+                    "outtmpl": save_path,
+                    "quiet": True,
+                    "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"]),
+                    "no_warnings": True,
+                    "logtostderr": True,
+                }
+                
+                # 使用yt_dlp下载视频
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([video.url])
+                
+                logger.info(f"yt_dlp下载完成: {video.savetitle}")
+                return True
+            else:
+                # cloudscraper不可用，使用dissionpage获取下载链接
+                logger.info(f"cloudscraper不可用，使用dissionpage获取下载链接: {video.url}")
+                
+                # 获取唯一的Chrome实例
+                main_page = scraper_manager.get_main_chromium_page()
+                
+                # 新建标签页
+                new_tab = main_page.new_tab()
+                
+                try:
+                    # 在新标签页中访问网页
+                    new_tab.get(video.url)
                     
-                # 确保savetitle存在后再构建保存路径
-                if not video.savetitle:
-                    logger.error(f"无法获取视频日期，无法生成savetitle: {video.url}")
-                    return False
+                    logger.info("等待下载引导页面出现")
+                    new_tab.wait.ele_displayed(f"#{HANIME1_ELEMENTS['DOWNLOAD_BUTTON']}", timeout=20)
+                    download_guide_link: str = str(new_tab.ele(f"#{HANIME1_ELEMENTS['DOWNLOAD_BUTTON']}").attr("href"))
+                    
+                    new_tab.get(download_guide_link)
+                    logger.info("等待下载链接出现")
+                    new_tab.wait.ele_displayed(f".{HANIME1_ELEMENTS['DOWNLOAD_LINK']}", timeout=20)
+                    download_link = str(new_tab.ele(f".{HANIME1_ELEMENTS['DOWNLOAD_LINK']}").attr("data-url"))
+                    logger.info(f"dissionpage成功获取下载链接: {download_link}")
+                finally:
+                    # 确保标签页被关闭
+                    tabs = main_page.get_tabs()
+                    if len(tabs) > 1:
+                        logger.info("关闭标签页")
+                        try:
+                            new_tab.close()
+                        except:
+                            pass
                 
-                # 构建保存路径
-                save_path = os.path.join(video.dpath, f"{video.savetitle}.mp4")
+                # 配置yt_dlp参数
+                ydl_opts = {
+                    "outtmpl": save_path,
+                    "quiet": True,
+                    "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"]),
+                    "no_warnings": True,
+                    "logtostderr": True,
+                }
                 
-                # 如果文件已存在，跳过下载
-                if os.path.exists(save_path):
-                    logger.info(f"文件已存在，跳过下载: {video.savetitle}")
-                    return True
+                # 使用yt_dlp下载视频
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([download_link])
                 
-                logger.info("等待下载引导页面出现")
-                new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"], timeout=20)
-                download_guide_link: str = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_BUTTON"]).attr("href"))
-                
-                new_tab.get(download_guide_link)
-                logger.info("等待下载链接出现")
-                new_tab.wait.ele_displayed(HANIME1_ELEMENTS["DOWNLOAD_LINK"], timeout=20)
-                download_link = str(new_tab.ele(HANIME1_ELEMENTS["DOWNLOAD_LINK"]).attr("data-url"))
-            finally:
-                # 确保标签页被关闭
-                tabs = main_page.get_tabs()
-                if len(tabs) > 1:
-                    logger.info("关闭标签页")
-                    try:
-                        new_tab.close()
-                    except:
-                        pass
-            
-            # 下载视频 yt-dlp
-            opts = {
-                "outtmpl": save_path,
-                "quiet": True,
-                "nocheckcertificate": not sm.settings.get("Check_Cert", DEFAULT_SETTINGS["Check_Cert"]),
-            }
-            with yt_dlp.YoutubeDL(opts) as ydl:  # pyright: ignore[reportArgumentType]
-                ydl.download([download_link])
-                
-            logger.info(f"下载完成: {video.savetitle}")
-            return True
+                logger.info(f"dissionpage下载完成: {video.savetitle}")
+                return True
         except Exception as e:
             logger.error(f"下载视频失败 {download_link}: {e}")
             return False
