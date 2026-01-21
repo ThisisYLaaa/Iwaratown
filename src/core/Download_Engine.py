@@ -391,7 +391,7 @@ class Download_Engine:
                 }
                 
                 # 使用yt_dlp下载视频
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # pyright: ignore[reportArgumentType]
                     ydl.download([video.url])
                 
                 logger.info(f"yt_dlp下载完成: {video.savetitle}")
@@ -439,7 +439,7 @@ class Download_Engine:
                 }
                 
                 # 使用yt_dlp下载视频
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # pyright: ignore[reportArgumentType]
                     ydl.download([download_link])
                 
                 logger.info(f"dissionpage下载完成: {video.savetitle}")
